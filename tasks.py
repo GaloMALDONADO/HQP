@@ -29,7 +29,7 @@ def errorInSE3(M, Mdes):
     between M and Mdes, both element of SE3.    
     '''
     error = se3.log(M.inverse()*Mdes)
-    return error.vector
+    return error
 
 
 class Task:
@@ -66,6 +66,10 @@ class SE3Task(Task):
         assert isinstance(M_ref, SE3), "M_ref is not an element of class SE3"
         self._M_ref = M_ref
 
+    @property
+    def refTrajectory(self):
+        return self._ref_trajectory
+
     def jointPostition(self):
         return robot.position(robot.q, joint_id)
     
@@ -86,6 +90,26 @@ class SE3Task(Task):
         v_error = v_frame - self._gMl.actInv(v_ref)
         return v_error.vector[self._mask];
     
+    def kin_value(self, t, q, local_frame = True):
+        oMi = self.robot.framePosition(self._frame_id)
+        v_frame = self.robot.frameVelocity(self._frame_id)
+        # Get the reference trajectory   
+        M_des, v_ref, a_ref  = self._ref_trajectory(t)
+        
+        #_ Task functions:
+        # Compute desired velocity
+        p_error = errorInSE3(oMi, M_des)
+        v_error = v_frame - self._gMl.actInv(v_ref)
+        # porportional derivative task
+        if self.expDecay is True:
+            self.kv = exponentialDecay(self.kp)
+        if self.adaptGain is True:
+            self.kp = adaptativeGain(p_error.vector, self.kmin, self.kmax, self.beta)
+        v_des = -self.kp * p_error.vector -self.kv * v_error.vector
+        #Jrf = self.robot.jacobian(robot.q,rf).copy()
+        J= self.robot.frameJacobian(q, self._frame_id, False)
+        return J[self._mask,:], v_des[self._mask]
+
     def dyn_value(self, t, q, v, local_frame = True):
         # Get the current configuration of the link
         oMi = self.robot.framePosition(self._frame_id);

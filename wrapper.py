@@ -141,12 +141,15 @@ class Wrapper():
 
     def update(self,q):
         se3.forwardKinematics(self.model, self.data, q)
+        se3.computeJacobians(self.model, self.data, q)
         self.q = q
-
+        
 
     def display(self, q, osimref=True, com=True, updateKinematics=True):
         # update q kinematics 
         se3.forwardKinematics(self.model, self.data, q)
+        se3.computeJacobians(self.model, self.data, q)
+        #self.updateGeometryPlacements(q,visual=True)
         self.q = q.copy()
 
         # show CoM
@@ -369,6 +372,9 @@ class Wrapper():
 
     def jacobian(self, q, index, update_geometry=True, local_frame=True):
         return se3.jacobian(self.model, self.data, q, index, local_frame, update_geometry)
+    
+    def computeJacobians(self, q):
+        return se3.computeJacobians(self.model, self.data, q)
 
     def framePosition(self, index):
         f = self.model.frames[index]
@@ -389,6 +395,15 @@ class Wrapper():
         v = f.placement.actInv(self.data.v[f.parent])
         a.linear += np.cross(v.angular.T, v.linear.T).T
         return a;
+        ''' Call computeJacobians if update_geometry is true. 
+        If not, user should call computeJacobians first. 
+        Then call getJacobian and return the resulted jacobian matrix. 
+        Attention: if update_geometry is true,the function computes 
+        all the jacobians of the model. It is therefore outrageously 
+        costly wrt a dedicated call. Use only with update_geometry for prototyping.
+    '''
+    def frameJacobian(self, q, index, update_geometry=True, local_frame=True):
+        return se3.frameJacobian(self.model, self.data, q, index, local_frame, update_geometry)
 
 
     def dof2pinocchio(self, dof):
@@ -479,12 +494,12 @@ class Wrapper():
 
     def half_sitting(self):
         q = self.q0
-        q[2] = 0.81
+        q[2] = 0.92#0.81
         v = self.v0
         idx = self.model.getJointId('hip_r')
         idx = self.model.joints[idx].idx_q
         M = se3.SE3.Identity()
-        M.rotation = rotate('x', 0.52)
+        M.rotation = rotate('x', 0.2) * rotate('y', -0.05)
         Mquat = se3ToXYZQUAT(M)
         q[idx] = Mquat[3]
         q[idx+1] = Mquat[4]
@@ -493,7 +508,7 @@ class Wrapper():
         idx = self.model.getJointId('hip_l')
         idx = self.model.joints[idx].idx_q
         M = se3.SE3.Identity()
-        M.rotation = rotate('x', 0.52)
+        M.rotation = rotate('x', 0.2) * rotate('y', 0.05)
         Mquat = se3ToXYZQUAT(M)
         q[idx] = Mquat[3]
         q[idx+1] = Mquat[4]
@@ -501,27 +516,27 @@ class Wrapper():
         q[idx+3] = Mquat[6]
         idx = self.model.getJointId('knee_r')
         idx = self.model.joints[idx].idx_q
-        q[idx] = -1.22
+        q[idx] = -0.4#1.22
         idx = self.model.getJointId('knee_l')
         idx = self.model.joints[idx].idx_q
-        q[idx] = -1.22
+        q[idx] = -0.4
         idx = self.model.getJointId('ankle_r')
         idx = self.model.joints[idx].idx_q
-        q[idx] = 0.61
+        q[idx] = 0.25#0.61
         idx = self.model.getJointId('ankle_l')
         idx = self.model.joints[idx].idx_q
-        q[idx] = 0.61
+        q[idx] = 0.25
         idx = self.model.getJointId('mtp_r')
         idx = self.model.joints[idx].idx_q
-        q[idx] = 0.1
+        q[idx] = -0.05
         idx = self.model.getJointId('mtp_l')
         idx = self.model.joints[idx].idx_q
-        q[idx] = 0.1
+        q[idx] = -0.05
         # Torso and head
         idx = self.model.getJointId('back')
         idx = self.model.joints[idx].idx_q
         M = se3.SE3.Identity()
-        M.rotation = rotate('x', -0.1)
+        M.rotation = rotate('x', -0.2)
         Mquat = se3ToXYZQUAT(M)
         q[idx] = Mquat[3]
         q[idx+1] = Mquat[4]
@@ -530,7 +545,7 @@ class Wrapper():
         idx = self.model.getJointId('neck')
         idx = self.model.joints[idx].idx_q
         M = se3.SE3.Identity()
-        M.rotation = rotate('x', 0.1)
+        M.rotation = rotate('x', 0.2)
         Mquat = se3ToXYZQUAT(M)
         q[idx] = Mquat[3]
         q[idx+1] = Mquat[4]
@@ -540,7 +555,7 @@ class Wrapper():
         idx = self.model.getJointId('acromial_r')
         idx = self.model.joints[idx].idx_q
         M = se3.SE3.Identity()
-        M.rotation = rotate('x', 0.52)
+        M.rotation = rotate('x', -0.2)*rotate('y',-0.18)
         Mquat = se3ToXYZQUAT(M)
         q[idx] = Mquat[3]
         q[idx+1] = Mquat[4]
@@ -549,7 +564,7 @@ class Wrapper():
         idx = self.model.getJointId('acromial_l')
         idx = self.model.joints[idx].idx_q
         M = se3.SE3.Identity()
-        M.rotation = rotate('x', 0.52)
+        M.rotation = rotate('x', -0.2)*rotate('y',0.18)
         Mquat = se3ToXYZQUAT(M)
         q[idx] = Mquat[3]
         q[idx+1] = Mquat[4]
@@ -557,10 +572,10 @@ class Wrapper():
         q[idx+3] = Mquat[6]
         idx = self.model.getJointId('elbow_r')
         idx = self.model.joints[idx].idx_q
-        q[idx] = 1.22
+        q[idx] = 0.7
         idx = self.model.getJointId('elbow_l')
         idx = self.model.joints[idx].idx_q
-        q[idx] = 1.22
+        q[idx] = 0.7
         idx = self.model.getJointId('lunate_hand_r')
         idx = self.model.joints[idx].idx_q
         q[idx] = 0.15
@@ -569,16 +584,16 @@ class Wrapper():
         q[idx] = 0.15
         idx = self.model.getJointId('radioulnar_r')
         idx = self.model.joints[idx].idx_q
-        q[idx] = -0.22
+        q[idx] = 1.
         idx = self.model.getJointId('radioulnar_l')
         idx = self.model.joints[idx].idx_q
-        q[idx] = 0.22
+        q[idx] = 1.#0.22
         idx = self.model.getJointId('radius_lunate_r')
         idx = self.model.joints[idx].idx_q
-        q[idx] = -0.1
+        q[idx] = -0.02
         idx = self.model.getJointId('radius_lunate_l')
         idx = self.model.joints[idx].idx_q
-        q[idx] = 0.1
+        q[idx] = 0.02
         
         self.q = q
         return q

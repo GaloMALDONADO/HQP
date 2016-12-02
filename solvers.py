@@ -1,9 +1,21 @@
 import numpy as np
-
+from wrapper import Wrapper
+import
 class NProjections:
-    def __init__(self):
+    #def __init__(self, name, q, v, dt, robotName, model_path):
+    def __init__(self, name, robot):
+        self.name = name
+        self.time_step = 0
+        #self.robot = Wrapper(model_path)
+        self.robot = robot
+        self.nq = self.robot.nq
+        self.nv = self.robot.nv
+        self.na = self.nv-6
+        self.dt = dt 
+        self.t = 0.0
         self.tasks = []
         self.task_weights = []
+    
 
     def null(A, eps=1e-12):
         '''Compute a base of the null space of A.'''
@@ -34,6 +46,9 @@ class NProjections:
         q_dot
         ERRstack contain a stack of desired velocities in the operational space
         '''
+        for i in range (self.tasks):
+            task = np.vstack([solver.tasks[i]])
+
         q_dot = np.linalg.pinv(Jstack[0])*ERRstack[0]
         Z = self.null(Jstack[0])
         if len(Jstack) > 0:
@@ -68,7 +83,7 @@ class NProjections:
         b = 1
         tau += np.linalg.pinv(Jstack[0]/robot.M) * ( ERRstack+((J/robot.M)*b)-dift )
         Z += self.null(Jstack[k]/robot.M) * Z[k-1]
-        retrun Z
+        return Z
 
 class qpOASES:
     def __init__(self):

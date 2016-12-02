@@ -42,7 +42,7 @@ class Simulator(object):
         return self.v;
     
     def increment(self, q, qdot, updateViewer=True):
-        q_next = se3.integrate(self.model,q,dq)
+        q_next = se3.integrate(self.model,q,qdot)
         q[:] = q_next[:]
         self.q = copy(q)
         self.viewer.updateRobotConfig(self.q)
