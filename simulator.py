@@ -2,6 +2,7 @@ from wrapper import Wrapper
 from viewer_utils import Viewer
 import numpy as np 
 from pinocchio.utils import zero as mat_zeros
+import pinocchio as se3
 
 class Simulator(object):
     DISPLAYCOM = True
@@ -17,14 +18,15 @@ class Simulator(object):
         self.vOld = np.matrix.copy(v)
         self.dv = np.asmatrix(np.zeros(n)).T
 
-    def __init__(self, name, q, v, dt, robotName, model_path):
+    def __init__(self, name, q, v, dt, robotName, robot): #model_path
         self.name = name
+        self.robotName = robotName
         self.time_step = 0
-        self.robot = Wrapper(model_path)
+        self.robot = robot #Wrapper(model_path)
         self.nq = self.robot.nq
         self.nv = self.robot.nv
         self.na = self.nv-6
-        self.viewer=Viewer(self.name, self.robot, robotName)
+        self.viewer = Viewer(self.name, self.robot, robotName)
         self.reset(0, q, v, dt)
         self.viewer.updateRobotConfig(q, robotName)
         if(self.DISPLAYCOM):
@@ -42,10 +44,10 @@ class Simulator(object):
         return self.v;
     
     def increment(self, q, qdot, updateViewer=True):
-        q_next = se3.integrate(self.model,q,dq)
+        q_next = se3.integrate(self.robot.model, q, qdot)
         q[:] = q_next[:]
-        self.q = copy(q)
-        self.viewer.updateRobotConfig(self.q)
+        self.robot.q = q.copy()
+        self.viewer.updateRobotConfig(self.robot.q, self.robotName )
         
     def integrateAcc(self, t, dt, dv, f, tau, updateViewer=True):
         res = [];

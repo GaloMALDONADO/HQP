@@ -1,13 +1,15 @@
 import numpy as np
 from wrapper import Wrapper
-import
+#import
 class NProjections:
     #def __init__(self, name, q, v, dt, robotName, model_path):
-    def __init__(self, name, robot):
+    def __init__(self, name, q, v, dt, robotName, robot):
         self.name = name
         self.time_step = 0
+        self.robot = robot 
+        self.robot.q = q
+        self.robot.v = v
         #self.robot = Wrapper(model_path)
-        self.robot = robot
         self.nq = self.robot.nq
         self.nv = self.robot.nv
         self.na = self.nv-6
@@ -40,17 +42,29 @@ class NProjections:
                 return True
             raise ValueError("[InvDynForm] ERROR: task %s cannot be removed because it does not exist!" % task_name);
 
-    def inverseKinematics1st(self, Jstack, ERRstack):
+    def inverseKinematics1st(self,t):
         ''' 
         Hierarchichal Inverse Kinematics formulation based on nullspace projection
         q_dot
         ERRstack contain a stack of desired velocities in the operational space
         '''
-        for i in range (self.tasks):
-            task = np.vstack([solver.tasks[i]])
+        Jstack = []
+        Errstack = []
+        if len(self.tasks)==1:
+            J, E = self.tasks[0].kin_value(t, self.robot.q)
+            print J
+            print E
+            q_dot = np.linalg.pinv(J)*E
+            #Z = self.null(J)
+            return q_dot
 
-        q_dot = np.linalg.pinv(Jstack[0])*ERRstack[0]
-        Z = self.null(Jstack[0])
+        else:
+            for i in xrange (len(self.tasks)):
+                task = np.vstack([self.tasks[i]])
+                Jstack, ERRstack = self.tasks[i].kin_value(t, self.robot.q)
+                q_dot = np.linalg.pinv(Jstack[0])*ERRstack[0]
+                Z = self.null(Jstack[0])
+
         if len(Jstack) > 0:
             for k in range (1, len(Jstack)):
                 Jplus = Z[k-1]*np.linalg.pinv(Jstack[k]*Z[k-1])
