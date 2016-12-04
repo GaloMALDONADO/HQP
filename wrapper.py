@@ -1,25 +1,32 @@
 # import buildTree, createHumanVisualsList and displayHuman
-from biomechanics.full_body_skeleton import *
+#from biomechanics.full_body_skeleton import *
 import pinocchio as se3
 from pinocchio.utils import zero
-from biomechanics.maths import *
+#from biomechanics.maths import *
 import numpy as np
 import time
-from biomechanics.OpenSimParser import *
-from biomechanics.filters import *
+import os
+from Models import osim_parser
+#from biomechanics.OpenSimParser import *
+#from biomechanics.filters import *
 
 class Wrapper():
     def __init__(self, model_path=None):
         if model_path is None:
             model_path = '/local/gmaldona/devel/biomechatronics/models/GX.osim'
-        self.osim = OpenSimTools()
+        #self.osim = OpenSimTools()
         #PyModel = Osim.readOsim(model)
         #self.model, self.visuals = Osim.buildPinocchioModel(Osim.readOsim(model_path))
-        self.model, self.visuals = self.osim.parseModel(model_path)
+        r = osim_parser.Osim2PinocchioModel()
+        r.parseModel(model_path)
+        self.model = r.model 
+        self.visuals = r.visuals
+        self.data = r.data
+        #self.osim.parseModel(model_path)
         #human = Skelete()
         #self.model = human.model
         #self.visuals = human.visuals
-        self.data = self.model.createData()
+        #self.data = self.model.createData()
         self.v0 = zero(self.model.nv)
         self.q0 = zero(self.model.nq)
         self.q = self.q0
@@ -66,7 +73,6 @@ class Wrapper():
 
     # Create the scene displaying the robot meshes in gepetto-viewer
     def loadDisplayModel(self, nodeName, windowName="pinocchio"):
-        import os
         # Open a window for displaying your model.  
         try:
             # If the window already exists, do not do anything.                           
