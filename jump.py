@@ -6,13 +6,15 @@ from simulator import Simulator
 from pinocchio.utils import zero as mat_zeros
 import trajectories as traj 
 from solvers import NProjections
+import os
+actual_path = os.path.dirname(os.path.abspath('HQP'))
 
 #__ Config
 viewerName = 'Parkour'
 robotName = "Skelette"
 model_path = conf.model_path
 #__ create the robot
-robot = Wrapper(model_path)
+robot = Wrapper(actual_path+model_path)
 dt = conf.dt
 q0 = conf.half_sitting
 v0 = mat_zeros(robot.nv)
