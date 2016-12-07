@@ -13,6 +13,8 @@ class Simulator(object):
     def reset(self, t, q, v, dt):
         n = self.nv
         self.dt = dt
+        self.t = t
+        self.time_step = 0
         self.q = np.matrix.copy(q)
         self.v = np.matrix.copy(v)
         self.vOld = np.matrix.copy(v)
@@ -43,14 +45,25 @@ class Simulator(object):
         self.v = np.matrix.copy(v);
         return self.v;
     
-    def increment(self, q, qdot, updateViewer=True):
-        q_next = se3.integrate(self.robot.model, q, qdot)
-        q[:] = q_next[:]
-        self.robot.q = q.copy()
-        self.viewer.updateRobotConfig(self.robot.q, self.robotName )
+    def increment(self, q, v, dt, t, updateViewer=True):
+        self.t = t
+        self.time_step +=1 
+        q_old = q.copy()
+        v_old = v.copy()
+        self.robot.v = v_old*dt
+        self.q = se3.integrate(self.robot.model, q_old, self.robot.v)
+        self.viewer.updateRobotConfig(self.q, self.robotName )
         
+    def increment2(self, q, dv, dt, t, updateViewer=True):
+        self.t = t
+        self.time_step +=1 
+        q_old = q.copy()
+        self.robot.a = dv.copy()*dt
+        self.q  = se3.integrate(self.robot.model, q_old, self.robot.v*dt)
+        self.robot.v += dv.copy()*dt 
+        self.viewer.updateRobotConfig(self.q, self.robotName )
+
     def integrateAcc(self, t, dt, dv, f, tau, updateViewer=True):
-        res = [];
         self.t = t;
         self.time_step += 1;
         self.dv = np.matrix.copy(dv);
@@ -59,8 +72,9 @@ class Simulator(object):
             print "SIMULATOR ERROR Time %.3f "%t, "norm of quaternion is not 1=%f" % norm(self.q[3:7]);
             
         ''' Integrate velocity and acceleration '''
-        self.q  = se3.integrate(self.r.model, self.q, dt*self.v);
+        self.q  = se3.integrate(self.robot.model, self.q, dt*self.v);
         self.v += dt*self.dv;
+        self.viewer.updateRobotConfig(self.q, self.robotName ) 
     
     ''' ---------- VIEWER ------------ '''
     def updateComPositionInViewer(self, com):
