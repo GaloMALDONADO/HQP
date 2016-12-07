@@ -1,12 +1,12 @@
 # import buildTree, createHumanVisualsList and displayHuman
 #from biomechanics.full_body_skeleton import *
 import pinocchio as se3
-from pinocchio.utils import zero
 #from biomechanics.maths import *
 import numpy as np
 import time
 import os
 from Models import osim_parser
+from pinocchio.utils import XYZQUATToViewerConfiguration, zero, se3ToXYZQUAT
 #from biomechanics.OpenSimParser import *
 #from biomechanics.filters import *
 
@@ -33,6 +33,8 @@ class Wrapper():
         self.oMp = se3.utils.rotate('z',np.pi/2) * se3.utils.rotate('x',np.pi/2)
         self.markersFreq = np.float(400.)
         self.dt = np.float(1/400.)
+        self.v = zero(self.model.nv)
+        self.a = zero(self.model.nv)
         #self.initDisplay()
         #self.half_sitting()
         #se3.centerOfMass(self.model, self.data, zero(self.model.nq), zero(self.model.nv),True)
@@ -146,17 +148,15 @@ class Wrapper():
         return subtree
 
     def update(self,q):
-        se3.forwardKinematics(self.model, self.data, q)
+        se3.forwardKinematics(self.model, self.data, q, self.v)
+        se3.framesKinematics(self.model, self.data, q)
         se3.computeJacobians(self.model, self.data, q)
-        self.q = q
+        self.q = q.copy()
         
 
     def display(self, q, osimref=True, com=True, updateKinematics=True):
         # update q kinematics 
-        se3.forwardKinematics(self.model, self.data, q)
-        se3.computeJacobians(self.model, self.data, q)
-        #self.updateGeometryPlacements(q,visual=True)
-        self.q = q.copy()
+        self.update(q)
 
         # show CoM
         if com is True:
@@ -228,7 +228,11 @@ class Wrapper():
         
     def generalizedVelocity(self, Q, dt):
         return np.asmatrix( np.gradient(Q, dt) )
-        
+
+    def biais(self, q, v):
+        ''' the coriolis, centrifugal and gravitational effects '''
+        return se3.nle(self.model, self.data, q, v)
+
     def generalizedAcceleration(self, V, dt):
         return np.asmatrix(np.gradient(V, dt))
 
