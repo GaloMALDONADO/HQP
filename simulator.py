@@ -48,18 +48,15 @@ class Simulator(object):
     def increment(self, q, v, dt, t, updateViewer=True):
         self.t = t
         self.time_step +=1 
-        q_old = q.copy()
-        v_old = v.copy()
-        self.robot.v = v_old*dt
-        self.q = se3.integrate(self.robot.model, q_old, self.robot.v)
+        self.robot.v = v.copy()*dt
+        self.q = se3.integrate(self.robot.model, q.copy(), self.robot.v)
         self.viewer.updateRobotConfig(self.q, self.robotName )
         
     def increment2(self, q, dv, dt, t, updateViewer=True):
         self.t = t
         self.time_step +=1 
-        q_old = q.copy()
         self.robot.a = dv.copy()*dt
-        self.q  = se3.integrate(self.robot.model, q_old, self.robot.v*dt)
+        self.q  = se3.integrate(self.robot.model, q.copy(), self.robot.v*dt)
         self.robot.v += dv.copy()*dt 
         self.viewer.updateRobotConfig(self.q, self.robotName )
 
