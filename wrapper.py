@@ -11,22 +11,17 @@ from pinocchio.utils import XYZQUATToViewerConfiguration, zero, se3ToXYZQUAT
 #from biomechanics.filters import *
 
 class Wrapper():
-    def __init__(self, model_path=None):
+    def __init__(self, model_path=None, mesh_path=None):
         if model_path is None:
             model_path = '/local/gmaldona/devel/biomechatronics/models/GX.osim'
-        #self.osim = OpenSimTools()
-        #PyModel = Osim.readOsim(model)
-        #self.model, self.visuals = Osim.buildPinocchioModel(Osim.readOsim(model_path))
         r = osim_parser.Osim2PinocchioModel()
-        r.parseModel(model_path)
+        self.mesh_path = mesh_path
+        self.model_path = model_path
+        r.parseModel(self.model_path,self.mesh_path)
         self.model = r.model 
         self.visuals = r.visuals
         self.data = r.data
-        #self.osim.parseModel(model_path)
-        #human = Skelete()
-        #self.model = human.model
-        #self.visuals = human.visuals
-        #self.data = self.model.createData()
+
         self.v0 = zero(self.model.nv)
         self.q0 = zero(self.model.nq)
         self.q = self.q0
@@ -35,22 +30,7 @@ class Wrapper():
         self.dt = np.float(1/400.)
         self.v = zero(self.model.nv)
         self.a = zero(self.model.nv)
-        #self.initDisplay()
-        #self.half_sitting()
-        #se3.centerOfMass(self.model, self.data, zero(self.model.nq), zero(self.model.nv),True)
-        #se3.forwardKinematics(self.model, self.data, zero(self.model.nq), zero(self.model.nv))
-        #se3.framesKinematics(self.model, self.data, zero(self.model.nq))
 
-        #self.q0[6] = 1
-        #self.visuals = createHumanVisualsList(self.model.names)
-        #self.play(self.q0, self.v0)
-        #self.lowerPoseLimit = {
-        #    self.
-        #self.maximumEfforts
-        #    def updateBodyPlacements(self, q):
-        #        se3.framesKinematics(self.model, self.data, q))
-        #    def forwardKinematics(model, data, nq, nv):
-        #        se3.forwardKinematics(model, data, nq, nv)
     @property
     def nq(self):
         return self.model.nq
@@ -148,7 +128,7 @@ class Wrapper():
         return subtree
 
     def update(self,q):
-        se3.forwardKinematics(self.model, self.data, q, self.v)
+        se3.forwardKinematics(self.model, self.data, q, self.v, self.a)
         se3.framesKinematics(self.model, self.data, q)
         se3.computeJacobians(self.model, self.data, q)
         self.q = q.copy()
