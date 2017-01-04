@@ -5,3 +5,7 @@ __pycache__/
 *.pyc
 *.py~
 Models/
+build/
+examples/
+dist/
+*egg-info/
