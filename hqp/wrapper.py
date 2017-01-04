@@ -5,7 +5,7 @@ import pinocchio as se3
 import numpy as np
 import time
 import os
-from Models import osim_parser
+from models import osim_parser
 from pinocchio.utils import XYZQUATToViewerConfiguration, zero, se3ToXYZQUAT
 #from biomechanics.OpenSimParser import *
 #from biomechanics.filters import *
