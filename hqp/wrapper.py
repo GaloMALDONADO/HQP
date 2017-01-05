@@ -1,14 +1,11 @@
-# import buildTree, createHumanVisualsList and displayHuman
-#from biomechanics.full_body_skeleton import *
 import pinocchio as se3
-#from biomechanics.maths import *
 import numpy as np
 import time
 import os
 from models import osim_parser
 from pinocchio.utils import XYZQUATToViewerConfiguration, zero, se3ToXYZQUAT
-#from biomechanics.OpenSimParser import *
-#from biomechanics.filters import *
+from bmtools.algebra import quaternion_from_matrix, euler_matrix
+from bmtools.filters import *
 
 class Wrapper():
     def __init__(self, model_path=None, mesh_path=None):
@@ -176,7 +173,7 @@ class Wrapper():
         return q
         
     def readOsim(self, filename):
-        trial = self.osim.readData(filename)
+        trial = osim_parser.readOsim(filename)
         trial['osim_data'] = trial['data']
         trial['pinocchio_data'] = np.asmatrix(self.parseTrial(trial['data'][:]))
         trial['time'] = np.asmatrix(trial['time'][:])
@@ -198,10 +195,10 @@ class Wrapper():
     def forwardDynamics(self):
         pass
 
-    def position(self, q, index, update_geometry=True):
-        if update_geometry:
-            se3.forwardKinematics(self.model, self.data, q)
-        return self.data.oMi[index] 
+#    def position(self, q, index, update_geometry=True):
+#        if update_geometry:
+#            se3.forwardKinematics(self.model, self.data, q)
+#        return self.data.oMi[index] 
 
     def differentiate(self, q1, q2):
         return se3.differentiate(self.model, np.asmatrix(q1), np.asmatrix(q2))
@@ -366,8 +363,10 @@ class Wrapper():
     def computeJacobians(self, q):
         return se3.computeJacobians(self.model, self.data, q)
 
-    def framePosition(self, index):
+    def framePosition(self, index, q=None):
         f = self.model.frames[index]
+        if q is not None:
+            se3.forwardKinematics(self.model, self.data, q)
         return self.data.oMi[f.parent].act(f.placement)
 
     def frameVelocity(self, index):
