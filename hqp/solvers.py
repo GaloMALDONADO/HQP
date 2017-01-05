@@ -54,8 +54,17 @@ class NProjections:
         ERRstack = []
         Z = []
         if len(self.tasks)==1:
-            J, E = self.tasks[0].kin_value(t, self.robot.q)
-            q_dot = np.linalg.pinv(J)*E
+            if np.size(self.tasks[0]) > 1:
+                j = []; e = []; d =[]
+                for w in xrange(len(self.tasks[0])):
+                    x1, x3 = self.tasks[0][w].kyn_value(t, self.robot.q)
+                    j.append(x1); e.append(x3);
+                    J = np.vstack(j); E = np.vstack(e);
+            else :        
+                J, E = self.tasks[0].kyn_value(t, self.robot.q)
+            
+            Jstack.append(J); Dstack.append(D); ERRstack.append(E);
+            q_dot = np.linalg.pinv(Jstack[0])*(ERRstack[0])
             return q_dot
 
         else:
@@ -102,8 +111,18 @@ class NProjections:
         Dstack = []
         Z = []
         if len(self.tasks)==1:
-            J, D, E = self.tasks[0].dyn_value(t, self.robot.q, self.robot.v)
-            q_dot_dot = np.linalg.pinv(J)*(E - D)
+            # if tasks are combined at same hierarchy
+            if np.size(self.tasks[0]) > 1:
+                j = []; e = []; d =[]
+                for w in xrange(len(self.tasks[0])):
+                    x1, x2, x3 = self.tasks[0][w].dyn_value(t, self.robot.q, self.robot.v)
+                    j.append(x1); d.append(x2); e.append(x3);
+                    J = np.vstack(j); D = np.vstack(d); E = np.vstack(e);
+            else :        
+                J, D, E = self.tasks[0].dyn_value(t, self.robot.q, self.robot.v)
+            
+            Jstack.append(J); Dstack.append(D); ERRstack.append(E);
+            q_dot_dot = np.linalg.pinv(Jstack[0])*(ERRstack[0] - Dstack[0])
             return q_dot_dot
 
         else:
