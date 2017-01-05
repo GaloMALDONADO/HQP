@@ -10,7 +10,13 @@ setup(
     author='Galo MALDONADO',
     author_email='galo.maldonado@laas.fr',
     
-    install_require = {
-        'Pioncchio':  ["pinocchio"]
-    }
+    #install_requires = [
+    #    "pinocchio"
+    #],
+
+    classifiers=[
+        'Intended Audience :: Science/Research',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 2.7',
+    ],
 )
