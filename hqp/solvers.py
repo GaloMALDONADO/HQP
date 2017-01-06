@@ -4,21 +4,23 @@ import scipy
 #import
 class NProjections:
     #def __init__(self, name, q, v, dt, robotName, model_path):
-    def __init__(self, name, q, v, dt, robotName, robot):
-        self.name = name
-        self.time_step = 0
-        self.robot = robot 
+    def reset(self,q,v,dt):
         self.robot.q = q
         self.robot.v = v
-        #self.robot = Wrapper(model_path)
-        self.nq = self.robot.nq
-        self.nv = self.robot.nv
-        self.na = self.nv-6
+        #self.time_step = 0
         self.dt = dt 
         self.t = 0.0
         self.tasks = []
         self.task_weights = []
-        self.sot = []
+        self.stack = []
+
+    def __init__(self, name, q, v, dt, robotName, robot):
+        self.name = name
+        self.robot = robot 
+        self.nq = self.robot.nq
+        self.nv = self.robot.nv
+        self.na = self.nv-6
+        self.reset(q,v,dt)
 
     def null(self, A, eps=1e-12):
         '''Compute a base of the null space of A.'''
@@ -34,7 +36,6 @@ class NProjections:
         '''
         self.tasks        += [task]
         self.task_weights += [weight]
-        #self.sot.append(task.name)
         
     def removeTask(self, task_name):
         for (i,t) in enumerate(self.tasks):
@@ -43,6 +44,10 @@ class NProjections:
                 del self.task_weights[i]
                 return True
             raise ValueError("[InvDynForm] ERROR: task %s cannot be removed because it does not exist!" % task_name);
+
+    def emptyStack(self):
+        self.tasks = []
+        self.task_weights = []
 
     def inverseKinematics1st(self,t):
         ''' 
@@ -152,6 +157,7 @@ class NProjections:
                 Z = self.null(Jstack[k]*Z*Z.T) 
 
         return q_dot_dot
+
 
     def inverseDynamics(self, robot, Jstack, drift, ERRstack):
         ''' 
