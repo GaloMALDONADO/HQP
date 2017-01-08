@@ -18,7 +18,6 @@ class Wrapper():
         self.model = r.model 
         self.visuals = r.visuals
         self.data = r.data
-
         self.v0 = zero(self.model.nv)
         self.q0 = zero(self.model.nq)
         self.q = self.q0
@@ -125,9 +124,20 @@ class Wrapper():
         return subtree
 
     def update(self,q):
-        se3.forwardKinematics(self.model, self.data, q, self.v, self.a)
+        se3.computeAllTerms(self.model, self.data, self.q, self.v)
+        #se3.forwardKinematics(self.model, self.data, q, self.v, self.a)
+        #- se3::forwardKinematics                                                                              
+        #- se3::crba                                                                                           
+        #- se3::nonLinearEffects                                                                               
+        #- se3::computeJacobians                                                                               
+        #- se3::centerOfMass                                                                                   
+        #- se3::jacobianCenterOfMass                                                                           
+        #- se3::kineticEnergy                                                                                  
+        #- se3::potentialEnergy   
         se3.framesKinematics(self.model, self.data, q)
         se3.computeJacobians(self.model, self.data, q)
+        se3.rnea(self.model, self.data, q, self.v, self.a)
+        self.biais(self.q, self.v)
         self.q = q.copy()
         
 
