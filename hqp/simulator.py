@@ -3,6 +3,7 @@ from viewer_utils import Viewer
 import numpy as np 
 from pinocchio.utils import zero as mat_zeros
 import pinocchio as se3
+EPS = 1e-4
 
 class Simulator(object):
     DISPLAYCOM = True
@@ -55,7 +56,9 @@ class Simulator(object):
     def increment2(self, q, dv, dt, t, updateViewer=True):
         self.t = t
         self.time_step +=1 
-        self.robot.a = dv.copy()*dt
+        self.robot.a = dv.copy()
+        if(abs(np.linalg.norm(self.q[3:7])-1.0) > EPS):
+            print "SIMULATOR ERROR Time %.3f "%t, "norm of quaternion is not 1=%f" % norm(self.q[3:7])
         self.q  = se3.integrate(self.robot.model, q.copy(), self.robot.v*dt)
         self.robot.v += dv.copy()*dt 
         self.viewer.updateRobotConfig(self.q, self.robotName )
