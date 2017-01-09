@@ -237,9 +237,112 @@ class JointPostureTask(Task):
         return self._jacobian[self._mask,:], drift[self._mask], a_des[self._mask]
 
 
+''' Define Postural Task ''' 
+class PosturalTask(Task):
+
+  def __init__ (self, robot, name = "Postural Task"):
+    Task.__init__ (self, robot, name)
+
+    # mask over the desired euclidian axis
+    self._mask = (np.ones(robot.nv)).astype(bool)
+
+    # desired postural configuration
+    self.q_posture_des = zero(robot.nq)
+
+    # Init
+    self.__error_value = np.matrix(np.empty([robot.nv,1]))
+    self.__jacobian_value = np.matrix(np.identity(robot.nv))
+    self.__gain_vector = np.matrix(np.ones([1.,robot.nv]))
+
+  @property
+  def dim(self):
+    return self._mask.sum ()
+
+  def setPosture(self, q_posture):
+    self.q_posture_des = np.matrix.copy(q_posture);
+
+  def setGain(self, gain_vector):
+    assert gain_vector.shape == (1, self.robot.nv) 
+    self.__gain_vector = np.matrix(gain_vector)
+
+  def getGain(self):
+    return self.__gain_vector
+
+  def mask(self, mask):
+    assert len(mask) == self.robot.nv, "The mask must have {} elements".format(self.robot.nq)
+    self._mask = mask.astype(bool)
+
+  def error_dyn(self, t, q, v):
+    M_ff = XYZQUATToSe3(q[:7])
+    M_ff_des = XYZQUATToSe3(self.q_posture_des[:7])
+    error_ff = errorInSE3(M_ff, M_ff_des).vector() 
+    
+    # Compute error
+    error_value = self.__error_value
+    error_value[:6,0] = error_ff
+    error_value[6:,0] = q[7:,0] - self.q_posture_des[7:,0]
+ 
+    return error_value[self._mask], v[self._mask], 0.
+
+  def dyn_value(self, t, q, v, update_geometry = False):
+    M_ff = XYZQUATToSe3(q[:7])
+    M_ff_des = XYZQUATToSe3(self.q_posture_des[:7])
+    error_ff = errorInSE3(M_ff, M_ff_des).vector
+    
+    # Compute error
+    error_value = self.__error_value
+    error_value[:6,0] = error_ff
+    error_value[6:,0] = q[7:,0] - self.q_posture_des[7:,0]
+    
+    self.J = np.diag(self.__gain_vector.A.squeeze())
+    self.a_des = -(self.kp * error_value + self.kv * v)
+    self.drift = 0*self.a_des
+    
+    return self.J[self._mask,:], self.drift[self._mask], self.a_des[self._mask]
+
+  def jacobian(self, q):
+    self.__jacobian_value = np.diag(self.__gain_vector.A.squeeze())
+    return self.__jacobian_value[self._mask,:] 
 
 
-# Define Angular Momentum Task
+
+''' Define Free Flyer Rotation Task '''
+class FreeFlyerTask(Task):
+
+    def __init__ (self, robot, ref_trajectory, name = "Joint Posture Task"):
+        Task.__init__ (self, robot, name)
+        # mask over the desired euclidian axis
+        self._mask = (np.ones(6)).astype(bool)
+        #(np.hstack([np.zeros([3]),np.ones([3]),np.zeros([robot.nv-6])])).astype(bool)
+        # desired postural configuration
+        self._ref_traj = ref_trajectory;
+        # Init
+        self._jacobian = np.matrix(np.eye(robot.nv))
+        
+    
+    @property
+    def dim(self):
+        return self._mask.sum ()
+
+    def mask(self, mask):
+        assert len(mask) == 6, "The mask must have 6 elemets"
+        self._mask = mask.astype(bool)
+               
+
+    def dyn_value(self, t, q, v, update_geometry = False):
+        # Compute error
+        #T
+        (q_ref, v_ref, a_ref) = self._ref_traj(t)
+        M_ff = se3.utils.XYZQUATToSe3(q[:7])
+        M_ff_des = se3.utils.XYZQUATToSe3(q_ref[:7])
+        err = errorInSE3(M_ff, M_ff_des).vector
+        derr = v[:6, 0] - v_ref[:6, 0]
+        drift = 0*a_ref
+        a_des = -(self.kp * err + self.kv * derr)
+        return self._jacobian[self._mask,:], drift[self._mask], a_des[self._mask]
+
+
+''' Define Angular Momentum Task  '''
 class AngularMomentumTask(Task):
     def __init__ (self, robot, name = "Angular Momentum Task"):
         Task.__init__ (self, robot, name)
