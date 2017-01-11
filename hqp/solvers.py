@@ -22,7 +22,7 @@ class NProjections:
         self.na = self.nv-6
         self.reset(q,v,dt)
 
-\    def null(self, A, eps=1e-12):
+    def null(self, A, eps=1e-12):
         '''Compute a base of the null space of A.'''
         u, s, vh = np.linalg.svd(A)
         padding = max(0,np.shape(A)[1]-np.shape(s)[0])

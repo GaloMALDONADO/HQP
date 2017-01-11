@@ -21,11 +21,11 @@ class Simulator(object):
         self.vOld = np.matrix.copy(v)
         self.dv = np.asmatrix(np.zeros(n)).T
 
-    def __init__(self, name, q, v, dt, robotName, robot): #model_path
+    def __init__(self, name, q, v, dt, robotName, modelPath, meshPath): #model_path
         self.name = name
         self.robotName = robotName
         self.time_step = 0
-        self.robot = robot #Wrapper(model_path)
+        self.robot = Wrapper(modelPath, meshPath) #robot #Wrapper(model_path)
         self.nq = self.robot.nq
         self.nv = self.robot.nv
         self.na = self.nv-6

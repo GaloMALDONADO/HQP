@@ -1,9 +1,11 @@
 from first_order_low_pass_filter import FirstOrderLowPassFilter
-import wrapper as RobotWrapper
+from hqp.wrapper import Wrapper as RobotWrapper
 from pinocchio.utils import zero as mat_zeros
 import numpy as np
 import pinocchio as se3
 import os
+
+ENABLE_VIEWER = "ON"
 
 def xyzRpyToViewerConfig(xyz, rpy):
     xyz = np.asmatrix(xyz).reshape((3,1))
@@ -30,7 +32,7 @@ class Viewer(object):
         self.filter = FirstOrderLowPassFilter(0.002, self.CAMERA_LOW_PASS_FILTER_CUT_FREQUENCY, mat_zeros(2));
         self.robot = robotWrapper;
         self.robot.initDisplay("world/"+robotName, loadModel=False);
-        self.robot.loadDisplayModel("world/"+robotName, robotName);
+        self.robot.loadDisplayModel("world/"+robotName);
         self.robot.viewer.gui.setLightingMode('world/floor', 'OFF');
         self.robots = {robotName: self.robot};                
     
@@ -48,12 +50,12 @@ class Viewer(object):
     def updateRobotConfig(self, q, robotName, osimref=True):
         self.robot.display(q)
 
-    def addRobot(self, robotName, modelPath):
+    def addRobot(self, robotName, modelPath, meshPath):
         if(ENABLE_VIEWER):
-            newRobot = RobotWrapper(modelPath);
+            newRobot = RobotWrapper(modelPath,meshPath);
             newRobot.initDisplay("world/"+robotName, loadModel=False);
-
-            newRobot.viewer.gui.addURDF("world/"+robotName, urdfModelPath, modelPath);
+            newRobot.loadDisplayModel("world/"+robotName);
+            #newRobot.viewer.gui.addURDF("world/"+robotName, modelPath, meshPath);
             self.robots[robotName] = newRobot;
 
     def addSphere(self,name, radius, xyz, rpy=mat_zeros(3), color=(0,0,0,1.0), lightingMode='ON'):
@@ -63,3 +65,15 @@ class Viewer(object):
         self.robot.viewer.gui.applyConfiguration('world/'+name, position)
         self.robot.viewer.gui.setLightingMode('world/'+name, lightingMode);
         self.robot.viewer.gui.refresh();
+
+    def addLine(self,name, pos1, pos2, color=(0,0,0,1.0), lightingMode='ON'):
+        if(ENABLE_VIEWER):
+            if(len(pos1.shape)==1):
+                self.robot.viewer.gui.addLine('world/'+name, (pos1[0], pos1[1], pos1[2]), (pos2[0], pos2[1], pos2[2]), color);
+            else:
+                self.robot.viewer.gui.addLine('world/'+name, (pos1[0,0], pos1[1,0], pos1[2,0]), (pos2[0,0], pos2[1,0], pos2[2,0]), color);
+            self.robot.viewer.gui.setLightingMode('world/'+name, lightingMode);
+
+    def setVisibility(self, name, mode='OFF'):
+        if(ENABLE_VIEWER):
+            self.robot.viewer.gui.setVisibility('world/'+name, mode);

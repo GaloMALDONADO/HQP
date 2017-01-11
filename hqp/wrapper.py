@@ -8,7 +8,7 @@ from bmtools.algebra import quaternion_from_matrix, euler_matrix
 from bmtools.filters import *
 
 class Wrapper():
-    def __init__(self, model_path=None, mesh_path=None):
+    def __init__(self, model_path=None, mesh_path=None, OsimModel=True):
         if model_path is None:
             model_path = '/local/gmaldona/devel/biomechatronics/models/GX.osim'
         r = osim_parser.Osim2PinocchioModel()
@@ -62,7 +62,7 @@ class Wrapper():
             self.windowID = self.viewer.gui.createWindow (windowName)
         # Start a new "scene" in this window, named "world", with just a floor.         
         if "world" not in self.viewer.gui.getSceneList():
-          self.viewer.gui.createScene("world")
+          self.viewer.gui.createSceneWithFloor("world")
           #self.viewer.gui.createSceneWithFloor("world")
         self.viewer.gui.addSceneToWindow("world", self.windowID)
         
