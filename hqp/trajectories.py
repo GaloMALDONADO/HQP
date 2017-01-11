@@ -18,6 +18,36 @@ class RefTrajectory (object):
     return (np.matrix ([]).reshape (0, 0),)*3
 
 
+''' An Nd trajectory with varying state and zero velocity/acceleration. 
+    xref must be size a numpy matrix [dof, duration]
+'''
+
+class VaryingNdTrajectory (object):
+
+  def __init__ (self, name, x_ref, dt):
+    self._name = name
+    self._dt = dt
+    self._dim = x_ref.shape[0]
+    self._x_ref = x_ref.copy()
+    self._v_ref = self._x_ref*0
+    self._a_ref = self._x_ref*0
+
+  @property
+  def dim(self):
+    return self._dim
+    
+  def setReference(self, x_ref):
+    assert x_ref.shape[0]==self._x_ref.shape[0]
+    self._x_ref = x_ref
+
+  def __call__ (self, t):
+    assert t>=0.0, "Time must be non-negative"
+    i = int(t/self._dt);
+    if(i>=self._x_ref.shape[1]):
+       raise ValueError("Specified time exceeds the duration of the trajectory: "+str(t))
+    return (self._x_ref[:,i], self._v_ref[:,i], self._a_ref[:,i]);
+
+
 ''' An Nd trajectory with constant state and zero velocity/acceleration. '''
 class ConstantNdTrajectory (object):
 
