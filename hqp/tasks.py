@@ -36,10 +36,10 @@ class Task:
     def __init__(self, robot, name = "Task"):
         self.robot = robot
         self.name = name
-        self.kp = 1
-        self.kv = 1
+        self.kp = 80
+        self.kv = 2*np.sqrt(self.kp)
         # reference behaviours
-        self.expDecay = False
+        self.expDecay = True
         self.adaptGain = False
         self.kmin = 1
         self.kmax = 10
@@ -141,9 +141,9 @@ class SE3Task(Task):
         
         # porportional derivative task
         if self.expDecay is True:
-            self.kv = self.exponentialDecay(self.kp)
+            self.kv = exponentialDecay(self.kp)
         if self.adaptGain is True:
-            self.kp = self.adaptativeGain(p_error.vector, self.kmin, self.kmax, self.beta)
+            self.kp = adaptativeGain(p_error.vector, self.kmin, self.kmax, self.beta)
         a_des = - self.kp * p_error.vector - self.kv * v_error.vector + self._gMl.actInv(a_ref).vector #sign +-
         J = self.robot.frameJacobian(q, self._frame_id, False)
     
@@ -153,7 +153,6 @@ class SE3Task(Task):
             a_des[3:] = self._gMl.rotation * a_des[3:];
             J[:3,:] = self._gMl.rotation * J[:3,:];
             J[3:,:] = self._gMl.rotation * J[3:,:];
-        
         return J[self._mask,:], drift.vector[self._mask], a_des[self._mask]
 
 
@@ -192,13 +191,17 @@ class CoMTask(Task):
         # Compute errors
         p_error = p_com - p_ref
         v_error = v_com - v_ref 
-        
         drift = a_com # Coriolis acceleration
+        # porportional derivative task
+        if self.expDecay is True:
+            self.kv = exponentialDecay(self.kp)
+        if self.adaptGain is True:
+            self.kp = adaptativeGain(p_error, self.kmin, self.kmax, self.beta)
         a_des = -(self.kp * p_error + self.kv * v_error) + a_ref
 
         # Compute jacobian
         J = self.robot.Jcom(q)
-
+        
         return J[self._mask,:], drift[self._mask], a_des[self._mask]
 
     def jacobian(self, q, update_geometry = True):    
@@ -231,7 +234,7 @@ class JointPostureTask(Task):
         # Compute error
         (q_ref, v_ref, a_ref) = self._ref_traj(t)
         err = se3.differentiate(self.robot.model, q_ref, q)[6:]
-        derr = v[6:, 0] - v_ref[self._mask]
+        derr = v[6:, t] - v_ref[self._mask]
         a_des = a_ref[self._mask] - (self.kp * err + self.kv * derr) 
         drift = 0*a_des
         return self._jacobian[self._mask,:], drift[self._mask], a_des[self._mask]
@@ -297,7 +300,6 @@ class PosturalTask(Task):
     self.J = np.diag(self.__gain_vector.A.squeeze())
     self.a_des = -(self.kp * error_value + self.kv * v)
     self.drift = 0*self.a_des
-    
     return self.J[self._mask,:], self.drift[self._mask], self.a_des[self._mask]
 
   def jacobian(self, q):
@@ -331,15 +333,13 @@ class FreeFlyerTask(Task):
 
     def dyn_value(self, t, q, v, update_geometry = False):
         # Compute error
-        #T
         (q_ref, v_ref, a_ref) = self._ref_traj(t)
         M_ff = se3.utils.XYZQUATToSe3(q[:7])
-        M_ff_des = se3.utils.XYZQUATToSe3(q_ref[:7])
-        err = errorInSE3(M_ff, M_ff_des).vector
-        derr = v[:6, 0] - v_ref[:6, 0]
-        drift = 0*a_ref
-        a_des = -(self.kp * err + self.kv * derr)
-        return self._jacobian[self._mask,:], drift[self._mask], a_des[self._mask]
+        M_ff_des = se3.utils.XYZQUATToSe3(q_ref[:7,t])
+        self.err = errorInSE3(M_ff, M_ff_des).vector
+        self.a_des = -self.kp * self.err 
+        self.drift = 0*self.a_des
+        return self._jacobian[self._mask,:], self.drift[self._mask], self.a_des[self._mask]
 
 
 ''' Define Angular Momentum Task  '''
