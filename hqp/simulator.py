@@ -63,6 +63,25 @@ class Simulator(object):
         self.robot.v += dv.copy()*dt 
         self.viewer.updateRobotConfig(self.q, self.robotName )
 
+    def increment3(self, q, dv, dt, t, updateViewer=True):
+        self.t = t
+        self.time_step +=1 
+        self.robot.a = dv.copy()
+        if(abs(np.linalg.norm(self.q[3:7])-1.0) > EPS):
+            print "SIMULATOR ERROR Time %.3f "%t, "norm of quaternion is not 1=%f" % norm(self.q[3:7])
+        self.q  = se3.integrate(self.robot.model, q.copy(), self.robot.v*dt)
+        self.robot.v += dv.copy()*dt 
+        if t == 0:
+            acom=robot.data.acom[0]
+            vcom=robot.data.vcom[0]
+            pcom=robot.data.com[0]
+        
+        acom += np.matrix([0.,0.,-9.81/robot.data.mass[0]]).T
+        vcom += acom*dt
+        pcom += vcom*dt
+ 
+        self.viewer.updateRobotConfig(self.q, self.robotName )
+
     def integrateAcc(self, t, dt, dv, f, tau, updateViewer=True):
         self.t = t;
         self.time_step += 1;
