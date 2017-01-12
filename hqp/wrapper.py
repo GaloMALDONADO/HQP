@@ -36,64 +36,6 @@ class Wrapper():
     def nv(self):
         return self.model.nv
 
-    def initDisplay(self, viewerRootNodeName="world/pinocchio", loadModel=False):
-        import gepetto.corbaserver
-        try:
-            self.viewer=gepetto.corbaserver.Client()
-            print "Connected to corba server"
-            self.viewerRootNodeName = viewerRootNodeName
-            if loadModel:
-                self.loadDisplayModel(viewerRootNodeName)
-        except:
-            if 'viewer' in self.__dict__:
-                del self.viewer
-            print "!! Error while starting the viewer client. "
-            print "Check whether Gepetto-viewer-corba is properly started"
-
-    # Create the scene displaying the robot meshes in gepetto-viewer
-    def loadDisplayModel(self, nodeName, windowName="pinocchio"):
-        # Open a window for displaying your model.  
-        try:
-            # If the window already exists, do not do anything.                           
-            self.windowID = self.viewer.gui.getWindowID (windowName)
-            print "Warning: window '"+windowName+"' already created."
-            print "The previously created objects will not be destroyed and do not have to be created again."
-        except:
-            # Otherwise, create the empty window.                                           
-            self.windowID = self.viewer.gui.createWindow (windowName)
-        # Start a new "scene" in this window, named "world", with just a floor.         
-        if "world" not in self.viewer.gui.getSceneList():
-          self.viewer.gui.createSceneWithFloor("world")
-          #self.viewer.gui.createSceneWithFloor("world")
-        self.viewer.gui.addSceneToWindow("world", self.windowID)
-        
-        self.viewer.gui.createGroup(nodeName)
-            
-        # iterate over visuals and create the meshes in the viewer 
-        for i in range (1,len(self.visuals)):
-            self.viewer.gui.addMesh('world/'+self.name+'/'+self.visuals[i][1]+os.path.split(self.visuals[i][2])[1], self.visuals[i][2])
-        # iterate for creating nodes for all joint
-        for i in range(1,self.model.nbodies):
-            self.viewer.gui.addXYZaxis('world/'+self.name+'/'+self.model.names[i], [1., 0., 0., .5], 0.02, 1)
-        
-        # create a node for the center of mass
-        self.viewer.gui.addXYZaxis('world'+self.name+'/'+'/globalCoM', [0., 1., 0., .5], 0.03, 0.3)
-        
-        # Finally, refresh the layout to obtain your first rendering.           
-        self.viewer.gui.refresh()
-
-
-    def placeObject(self, objName, M, refresh=True):
-        '''                                                                                    
-        This function places (ie changes both translation and rotation) of the object names 
-        "objName" in place given by the SE3 object "M". By default, immediately refresh the 
-        layout. If multiple objects have to be placed at the same time, do the refresh only 
-        at the end of the list 
-        '''
-        pinocchioConf = XYZQUATToViewerConfiguration(se3ToXYZQUAT(M)) 
-        self.viewer.gui.applyConfiguration(objName,pinocchioConf)
-        if refresh: self.viewer.gui.refresh()
-
     def addLandmark(self, nodeName, size):
         self.viewer.gui.addLandmark(nodeName, size)
     
@@ -127,13 +69,13 @@ class Wrapper():
     def update(self,q):
         se3.computeAllTerms(self.model, self.data, self.q, self.v)
         #se3.forwardKinematics(self.model, self.data, q, self.v, self.a)
-        #- se3::forwardKinematics                                                                              
-        #- se3::crba                                                                                           
-        #- se3::nonLinearEffects                                                                               
-        #- se3::computeJacobians                                                                               
-        #- se3::centerOfMass                                                                                   
-        #- se3::jacobianCenterOfMass                                                                           
-        #- se3::kineticEnergy                                                                                  
+        #- se3::forwardKinematics 
+        #- se3::crba
+        #- se3::nonLinearEffects
+        #- se3::computeJacobians 
+        #- se3::centerOfMass                                                                                  
+        #- se3::jacobianCenterOfMass
+        #- se3::kineticEnergy   
         #- se3::potentialEnergy   
         se3.framesKinematics(self.model, self.data, q)
         se3.computeJacobians(self.model, self.data, q)
@@ -141,40 +83,6 @@ class Wrapper():
         self.biais(self.q, self.v)
         self.q = q.copy()
         
-
-    def display(self, q, osimref=True, com=True, updateKinematics=True):
-        # update q kinematics 
-        self.update(q)
-
-        # show CoM
-        if com is True:
-            CoM = se3.SE3.Identity()
-            CoM.translation = self.com(q)
-            self.placeObject("world/globalCoM", CoM, True)
-
-        #display skelette visuals
-        import os
-        for i in range (1,len(self.visuals)):
-            # get the parent joint
-            idx = self.model.getJointId(self.visuals[i][1]) 
-            pose = se3.SE3.Identity()
-            if osimref is True:
-                # convert bones pose
-                pose.translation=  self.data.oMi[idx].translation + np.matrix(np.array([0.,0.,0.])*np.array(np.squeeze(self.visuals[i][4][3:6]))[0]).T
-#*self.visuals[i][4][3:6])
-                pose.rotation= self.data.oMi[idx].rotation * self.oMp
-                
-            else:
-                pose.translation=  self.data.oMi[idx].translation+self.visuals[i][4][3:6]
-                pose.rotation= self.data.oMi[idx].rotation
-
-            # place objects
-            if i != len(self.visuals)-1:
-                self.viewer.gui.setScale("world/"+self.visuals[i][1]+os.path.split(self.visuals[i][2])[1], self.visuals[i][3]) 
-                self.placeObject("world/"+self.visuals[i][1]+os.path.split(self.visuals[i][2])[1], pose, False)
-            else:
-                self.viewer.gui.setScale("world/"+self.visuals[i][1]+os.path.split(self.visuals[i][2])[1], self.visuals[i][3]) 
-                self.placeObject("world/"+self.visuals[i][1]+os.path.split(self.visuals[i][2])[1], pose, True)
         
 
     def parseTrial(self, data):
