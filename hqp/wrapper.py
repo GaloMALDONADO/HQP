@@ -8,7 +8,8 @@ from bmtools.algebra import quaternion_from_matrix, euler_matrix
 from bmtools.filters import *
 
 class Wrapper():
-    def __init__(self, model_path=None, mesh_path=None, OsimModel=True):
+    def __init__(self, model_path=None, mesh_path=None, name='Robot',OsimModel=True):
+        self.name = name
         if model_path is None:
             model_path = '/local/gmaldona/devel/biomechatronics/models/GX.osim'
         r = osim_parser.Osim2PinocchioModel()
@@ -70,13 +71,13 @@ class Wrapper():
             
         # iterate over visuals and create the meshes in the viewer 
         for i in range (1,len(self.visuals)):
-            self.viewer.gui.addMesh('world/'+self.visuals[i][1]+os.path.split(self.visuals[i][2])[1], self.visuals[i][2])
+            self.viewer.gui.addMesh('world/'+self.name+'/'+self.visuals[i][1]+os.path.split(self.visuals[i][2])[1], self.visuals[i][2])
         # iterate for creating nodes for all joint
         for i in range(1,self.model.nbodies):
-            self.viewer.gui.addXYZaxis('world/'+self.model.names[i], [1., 0., 0., .5], 0.02, 1)
+            self.viewer.gui.addXYZaxis('world/'+self.name+'/'+self.model.names[i], [1., 0., 0., .5], 0.02, 1)
         
         # create a node for the center of mass
-        self.viewer.gui.addXYZaxis('world/globalCoM', [0., 1., 0., .5], 0.03, 0.3)
+        self.viewer.gui.addXYZaxis('world'+self.name+'/'+'/globalCoM', [0., 1., 0., .5], 0.03, 0.3)
         
         # Finally, refresh the layout to obtain your first rendering.           
         self.viewer.gui.refresh()

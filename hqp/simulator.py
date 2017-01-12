@@ -1,4 +1,4 @@
-from wrapper import Wrapper
+#from wrapper import Wrapper
 from viewer_utils import Viewer
 import numpy as np 
 from pinocchio.utils import zero as mat_zeros
@@ -20,12 +20,12 @@ class Simulator(object):
         self.v = np.matrix.copy(v)
         self.vOld = np.matrix.copy(v)
         self.dv = np.asmatrix(np.zeros(n)).T
-
-    def __init__(self, name, q, v, dt, robotName, modelPath, meshPath): #model_path
+    
+    def __init__(self, name, q, v, dt, robotName, robot): 
         self.name = name
         self.robotName = robotName
         self.time_step = 0
-        self.robot = Wrapper(modelPath, meshPath) #robot #Wrapper(model_path)
+        self.robot = robot
         self.nq = self.robot.nq
         self.nv = self.robot.nv
         self.na = self.nv-6
@@ -34,8 +34,7 @@ class Simulator(object):
         self.viewer.updateRobotConfig(q, robotName)
         if(self.DISPLAYCOM):
             self.viewer.addSphere('com', self.COM_SPHERE_RADIUS, mat_zeros(3), mat_zeros(3), self.COM_SPHERE_COLOR, 'OFF')
-        
-
+    
     ''' ********** SET ROBOT STATE ******* '''
     def setPositions(self, q):
         self.q = np.matrix.copy(q);
@@ -63,24 +62,6 @@ class Simulator(object):
         self.robot.v += dv.copy()*dt 
         self.viewer.updateRobotConfig(self.q, self.robotName )
 
-    def increment3(self, q, dv, dt, t, updateViewer=True):
-        self.t = t
-        self.time_step +=1 
-        self.robot.a = dv.copy()
-        if(abs(np.linalg.norm(self.q[3:7])-1.0) > EPS):
-            print "SIMULATOR ERROR Time %.3f "%t, "norm of quaternion is not 1=%f" % norm(self.q[3:7])
-        self.q  = se3.integrate(self.robot.model, q.copy(), self.robot.v*dt)
-        self.robot.v += dv.copy()*dt 
-        if t == 0:
-            acom=robot.data.acom[0]
-            vcom=robot.data.vcom[0]
-            pcom=robot.data.com[0]
-        
-        acom += np.matrix([0.,0.,-9.81/robot.data.mass[0]]).T
-        vcom += acom*dt
-        pcom += vcom*dt
- 
-        self.viewer.updateRobotConfig(self.q, self.robotName )
 
     def integrateAcc(self, t, dt, dv, f, tau, updateViewer=True):
         self.t = t;

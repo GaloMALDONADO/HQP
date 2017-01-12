@@ -48,15 +48,16 @@ class Viewer(object):
         if refresh: self.robot.viewer.gui.refresh()
 
     def updateRobotConfig(self, q, robotName, osimref=True):
-        self.robot.display(q)
+        self.robots[robotName].display(q);
 
-    def addRobot(self, robotName, modelPath, meshPath):
+    def addRobot(self, robot):
         if(ENABLE_VIEWER):
-            newRobot = RobotWrapper(modelPath,meshPath);
-            newRobot.initDisplay("world/"+robotName, loadModel=False);
-            newRobot.loadDisplayModel("world/"+robotName);
+            newRobot = robot
+            newRobot.initDisplay("world/"+robot.name, loadModel=False);
+            newRobot.loadDisplayModel("world/"+robot.name);
             #newRobot.viewer.gui.addURDF("world/"+robotName, modelPath, meshPath);
-            self.robots[robotName] = newRobot;
+            self.robots[robot.name] = newRobot
+            
 
     def addSphere(self,name, radius, xyz, rpy=mat_zeros(3), color=(0,0,0,1.0), lightingMode='ON'):
         #if(ENABLE_VIEWER):
