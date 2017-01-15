@@ -397,7 +397,7 @@ class AngularMomentumTask(Task):
         #print error_value.shape 
         #error_value_pond = np.matrix(P * error_value)
         #print b_angular[self._mask,0]
-        #print L
+        #print L000000000
         #L -= 10.
         #wXc  = SE3(eye(3),self.robot.position(q,1).inverse()*self.robot.com(q))
         #Jang = wXc.action.T[3:,:]*self.robot.mass(q)[:6,:]

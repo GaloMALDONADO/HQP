@@ -177,21 +177,27 @@ class Viewer(object):
     def addSphere(self,name, radius, xyz, rpy=mat_zeros(3), color=(0,0,0,1.0), lightingMode='ON'):
         #if(ENABLE_VIEWER):
         position = xyzRpyToViewerConfig(xyz, rpy);
-        self.robot.viewer.gui.addSphere('world/'+name, radius, color);
-        self.robot.viewer.gui.applyConfiguration('world/'+name, position)
-        self.robot.viewer.gui.setLightingMode('world/'+name, lightingMode);
-        self.robot.viewer.gui.refresh();
+        self.viewer.gui.addSphere('world/'+name, radius, color);
+        self.viewer.gui.applyConfiguration('world/'+name, position)
+        self.viewer.gui.setLightingMode('world/'+name, lightingMode);
+        self.viewer.gui.refresh();
 
     def addLine(self,name, pos1, pos2, color=(0,0,0,1.0), lightingMode='ON'):
         if(ENABLE_VIEWER):
             if(len(pos1.shape)==1):
-                self.robot.viewer.gui.addLine('world/'+name, (pos1[0], pos1[1], pos1[2]), (pos2[0], pos2[1], pos2[2]), color);
+                self.viewer.gui.addLine(name, 
+                                         (pos1[0], pos1[1], pos1[2]), 
+                                         (pos2[0], pos2[1], pos2[2]), 
+                                         color)
             else:
-                self.robot.viewer.gui.addLine('world/'+name, (pos1[0,0], pos1[1,0], pos1[2,0]), (pos2[0,0], pos2[1,0], pos2[2,0]), color);
-            self.robot.viewer.gui.setLightingMode('world/'+name, lightingMode);
+                self.viewer.gui.addLine(name, 
+                                        (pos1[0,0], pos1[1,0], pos1[2,0]), 
+                                        (pos2[0,0], pos2[1,0], pos2[2,0]), 
+                                        color);
+            self.viewer.gui.setLightingMode(name, lightingMode);
 
     def setVisibility(self, name, mode='OFF'):
         if(ENABLE_VIEWER):
-            self.robot.viewer.gui.setVisibility('world/'+name, mode);
+            self.viewer.gui.setVisibility('world/'+name, mode);
 
 
