@@ -39,7 +39,7 @@ class Task:
         self.kp = 80
         self.kv = 2*np.sqrt(self.kp)
         # reference behaviours
-        self.expDecay = True
+        self.expDecay = False
         self.adaptGain = False
         self.kmin = 1
         self.kmax = 10
@@ -256,13 +256,13 @@ class PosturalTask(Task):
     self.__error_value = np.matrix(np.empty([robot.nv,1]))
     self.__jacobian_value = np.matrix(np.identity(robot.nv))
     self.__gain_vector = np.matrix(np.ones([1.,robot.nv]))
-
+    
   @property
   def dim(self):
     return self._mask.sum ()
 
   def setPosture(self, q_posture):
-    self.q_posture_des = np.matrix.copy(q_posture);
+    self.q_posture_des = np.matrix.copy(q_posture)
 
   def setGain(self, gain_vector):
     assert gain_vector.shape == (1, self.robot.nv) 
@@ -342,6 +342,51 @@ class FreeFlyerTask(Task):
         return self._jacobian[self._mask,:], self.drift[self._mask], self.a_des[self._mask]
 
 
+''' Define Momentum Task  '''
+class MomentumTask(Task):
+    
+    def __init__ (self, robot, ref_trajectory, name = "Momentum Task"):
+        Task.__init__ (self, robot, name)
+        # mask over the desired euclidian axis
+        self._mask = (np.ones(6)).astype(bool)
+        self._ref_traj = ref_trajectory
+        #self.__gain_matrix = np.matrix(np.ones([robot.nv,robot.nv]))
+        self.__gain_matrix = np.matrix(np.eye(robot.nv))
+
+    @property
+    def dim(self):
+        return self._mask.sum ()
+
+    def mask(self, mask):
+        assert len(mask) == 6, "The mask must have {} elements".format(6)
+        self._mask = mask.astype(bool)
+
+    def setTrajectory(self, traj):
+        self._ref_traj = traj
+    
+    def setGain(self, gain_vector):
+        assert gain_vector.shape == (1, self.robot.nv)         
+        #self.__gain_matrix = np.matrix(np.matlib.repmat(gain,1,self.dim))
+        self.__gain_matrix = np.matrix(np.eye(robot.nv))
+        #self.__gain_matrix = np.matrix(np.matlib.repmat(gain,1,42))
+
+    def dyn_value(self, t, q, v):
+        (hg_ref, vhg_ref, ahg_ref) = self._ref_traj(t)
+        JMom = se3.ccrba(self.robot.model, self.robot.data, self.robot.q, self.robot.v)
+        hg_act =  self.robot.data.hg.np.A.copy()
+        self.err = hg_act[self._mask,:] - hg_ref[self._mask,:]
+        #self.derr =
+        self.a_des = -self.kp * self.err 
+        self.drift = 0*self.a_des
+        #print JMom.copy()[self._mask,:].shape
+        #print self.__gain_matrix.shape
+        self._jacobian = JMom.copy()[self._mask,:] * self.__gain_matrix
+        return self._jacobian, self.drift[self._mask,:], self.a_des[self._mask,:]
+
+
+''' Define Gaze Task '''
+#TODO
+
 ''' Define Angular Momentum Task  '''
 class AngularMomentumTask(Task):
     def __init__ (self, robot, name = "Angular Momentum Task"):
@@ -360,11 +405,11 @@ class AngularMomentumTask(Task):
     def setTrajectory(self, traj):
         self._ref_traj = traj
 
-    def error_dyn(self, t, q, v):
+    def dyn_value(self, t, q, v):
         g = self.robot.biais(q,0*v)
         b = self.robot.biais(q,v)
         b -= g;
-        M = self.robot.mass(q)
+        M = self.robot.data.mass[0]#(q)
         
         com_p = self.robot.com(q)
         cXi = SE3.Identity()
@@ -381,7 +426,13 @@ class AngularMomentumTask(Task):
         L_error = L - L_des
 
         acc = Ldot_des - b_com[3:,:]
-    
+        self.a_des = acc
+        self.drift = 0*self.a_des
+        self._jacobian = self.jacobian(q)
+
+        return self._jacobian[self._mask,:], self.drift[self._mask], self.a_des[self._mask]
+
+        #return self._coeff * L_error[self._mask], 0., self._coeff * acc[self._mask,0]
         # Compute error
         #error_value = self.__error_value
         #error_value[:6,0] = error_ff
@@ -405,7 +456,7 @@ class AngularMomentumTask(Task):
         #b_angular = -0*b_com
         #bang = Jang*v
         #return L[self._mask], 0., b_angular[self._mask,0]
-        return self._coeff * L_error[self._mask], 0., self._coeff * acc[self._mask,0]
+        #return self._coeff * L_error[self._mask], 0., self._coeff * acc[self._mask,0]
         #return bang[self._mask], 0., b_angular[self._mask,0]
 
 
