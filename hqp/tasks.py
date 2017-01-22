@@ -367,7 +367,7 @@ class MomentumTask(Task):
     def setGain(self, gain_vector):
         assert gain_vector.shape == (1, self.robot.nv)         
         #self.__gain_matrix = np.matrix(np.matlib.repmat(gain,1,self.dim))
-        self.__gain_matrix = np.matrix(np.eye(robot.nv))
+        self.__gain_matrix = np.matrix(np.diag(gain_vector))
         #self.__gain_matrix = np.matrix(np.matlib.repmat(gain,1,42))
 
     def dyn_value(self, t, q, v):
@@ -381,7 +381,7 @@ class MomentumTask(Task):
         #print JMom.copy()[self._mask,:].shape
         #print self.__gain_matrix.shape
         self._jacobian = JMom.copy()[self._mask,:] * self.__gain_matrix
-        return self._jacobian, self.drift[self._mask,:], self.a_des[self._mask,:]
+        return self._jacobian, self.drift, self.a_des
 
 
 ''' Define Gaze Task '''

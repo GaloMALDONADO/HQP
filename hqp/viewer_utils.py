@@ -66,7 +66,7 @@ class Viewer(object):
         print robot.name
         # Start a new "scene" in this window, named "world", with just a floor.
         if "world/"+robot.name not in self.viewer.gui.getSceneList():
-          self.viewer.gui.createSceneWithFloor("world/"+robot.name)
+            self.viewer.gui.createSceneWithFloor("world/"+robot.name)
          
         self.viewer.gui.addSceneToWindow("world/"+robot.name, self.windowID)
 
