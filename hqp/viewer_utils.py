@@ -63,18 +63,18 @@ class Viewer(object):
         except:
             # Otherwise, create the empty window.
             self.windowID = self.viewer.gui.createWindow (windowName)
-        print robot.name
-        # Start a new "scene" in this window, named "world", with just a floor.
+
+        # Start a new "scene" in this window, named "world/robot.name/", with just a floor.
         if "world/"+robot.name not in self.viewer.gui.getSceneList():
             self.viewer.gui.createSceneWithFloor("world/"+robot.name)
-         
+
         self.viewer.gui.addSceneToWindow("world/"+robot.name, self.windowID)
 
-        self.viewer.gui.createGroup(nodeName)
+        #self.viewer.gui.createGroup(nodeName)        
         # iterate over visuals and create the meshes in the viewer 
         for i in range (1,len(robot.visuals)):
             self.viewer.gui.addMesh('world/'+robot.name+'/'+
-                                    robot.visuals[i][1]+
+                                    robot.visuals[i][1]+'_'+
                                     os.path.split(self.robot.visuals[i][2])[1], 
                                     robot.visuals[i][2])
         # iterate for creating nodes for all joint 
@@ -131,19 +131,19 @@ class Viewer(object):
             # place objects
             if i != len(robot.visuals)-1:
                 self.viewer.gui.setScale('world/'+robot.name+'/'+
-                                         robot.visuals[i][1]+
+                                         robot.visuals[i][1]+'_'+
                                          os.path.split(robot.visuals[i][2])[1], 
                                          robot.visuals[i][3])
                 self.placeObject('world/'+robot.name+'/'+
-                                 robot.visuals[i][1]+
+                                 robot.visuals[i][1]+'_'+
                                  os.path.split(robot.visuals[i][2])[1], pose, False)
             else:
                 self.viewer.gui.setScale('world/'+robot.name+'/'+
-                                         robot.visuals[i][1]+
+                                         robot.visuals[i][1]+'_'+
                                          os.path.split(robot.visuals[i][2])[1], 
                                          robot.visuals[i][3])
-                self.placeObject('world/'+robot.name+'/'
-                                 +robot.visuals[i][1]+
+                self.placeObject('world/'+robot.name+'/'+
+                                 robot.visuals[i][1]+'_'+
                                  os.path.split(robot.visuals[i][2])[1], pose, True)
 
     def updateRobotConfig(self, q, robotName, osimref=True):
