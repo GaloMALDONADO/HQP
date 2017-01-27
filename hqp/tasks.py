@@ -387,6 +387,25 @@ class MomentumTask(Task):
 ''' Define Gaze Task '''
 #TODO
 
+''' Define Kinetic Energy Task '''
+class KineticEnergyTask(Task):
+    def __init__ (self, robot, name = "Kinetic Energy Task"):
+        Task.__init__ (self, robot, name)
+        # mask over the desired euclidian axis
+        self._mask = (np.ones(robot.nv)).astype(bool)
+
+    def dyn_value(self, t, q, v):
+        (ke_ref, vke_ref, ake_ref) = self._ref_traj(t)
+        Jf = self.robot.frameJacobian(q, self._frame_id, False)
+        J = 0.5*(self.robot.data.M*np.transpose(Jf)*Jf)
+        ke_act = 0.5*self.robot.data.mass[0]*self.robot.vcom^2
+        self.err = ke_act[self._mask,:] - ke_ref[self._mask,:]
+        self.a_des = -self.kp * self.err 
+        self.drift = 0*self.a_des
+        self._jacobian = J.copy()[self._mask,:] #* self.__gain_matrix
+        return self._jacobian, self.drift, self.a_des
+
+
 ''' Define Angular Momentum Task  '''
 class AngularMomentumTask(Task):
     def __init__ (self, robot, name = "Angular Momentum Task"):
