@@ -69,7 +69,7 @@ class Simulator(object):
         self.robot.dv = dv.copy()
         if(abs(np.linalg.norm(self.robot.q[3:7])-1.0) > EPS):
             print "SIMULATOR ERROR Time %.3f "%t, 
-            "norm of quaternion is not 1=%f" % np.linalg.norm(self.robot[3:7])
+            "norm of quaternion is not 1=%f" % np.linalg.norm(self.robot.q[3:7])
         self.robot.q  = se3.integrate(self.robot.model, q.copy(), self.robot.v*dt)
         self.robot.v += dv.copy()*dt 
         self.updateRobotConfig(self.robot.q)
