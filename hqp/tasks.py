@@ -12,6 +12,10 @@ def exponentialDecay(kp):
     kv = 2*np.sqrt(kp)
     return kv
 
+def exponentialGrowth(kp):
+    kv = 1./2*np.sqrt(kp)
+    return kv
+
 def adaptativeGain(p_error, kmin, kmax, beta):
     '''
     Returns a kp value given:
