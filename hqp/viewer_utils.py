@@ -35,6 +35,7 @@ class Viewer(object):
         self.name = name;
         self.filter = FirstOrderLowPassFilter(0.002, self.CAMERA_LOW_PASS_FILTER_CUT_FREQUENCY, mat_zeros(2))
         self.robot = robot
+        print "Adding robot: "+robot.name
         self.initDisplay("world/pinocchio")
         nodeName = "world/"+self.robot.name
         self.loadDisplayModel(nodeName, "pinocchio", self.robot)
@@ -49,40 +50,47 @@ class Viewer(object):
         except:
             if 'viewer' in self.__dict__:
                 del self.viewer
-                print "!! Error while starting the viewer client. "
-                print "Check whether Gepetto-viewer-corba is properly started"
+            print "!! Error while starting the viewer client. "
+            print "Check whether Gepetto-viewer-corba is properly started"
 
     # Create the scene displaying the robot meshes in gepetto-viewer      
     def loadDisplayModel(self, nodeName, windowName, robot):
         # Open a window for displaying your model.     
         try:
             # If the window already exists, do not do anything
-            self.windowID = self.viewer.gui.getWindowID (windowName)
+            self.windowID = self.viewer.gui.getWindowID(windowName)
             print "Warning: window '"+windowName+"' already created."
             print "The previously created objects will not be destroyed and do not have to be created again."
         except:
             # Otherwise, create the empty window.
-            self.windowID = self.viewer.gui.createWindow (windowName)
+            print ("Creating window: "+windowName)
+            self.windowID = self.viewer.gui.createWindow(windowName)
 
         # Start a new "scene" in this window, named "world/robot.name/", with just a floor.
-        if "world/"+robot.name not in self.viewer.gui.getSceneList():
-            self.viewer.gui.createSceneWithFloor("world/"+robot.name)
+        if nodeName not in self.viewer.gui.getSceneList():
+            print "creating scene: "+nodeName
+            self.viewer.gui.createSceneWithFloor(nodeName)
+        else:
+            print nodeName+" already in scene list"
 
-        self.viewer.gui.addSceneToWindow("world/"+robot.name, self.windowID)
+        self.viewer.gui.addSceneToWindow(nodeName, self.windowID)
 
         #self.viewer.gui.createGroup(nodeName)        
         # iterate over visuals and create the meshes in the viewer 
         for i in range (1,len(robot.visuals)):
-            self.viewer.gui.addMesh('world/'+robot.name+'/'+
-                                    robot.visuals[i][1]+'_'+
-                                    os.path.split(self.robot.visuals[i][2])[1], 
-                                    robot.visuals[i][2])
+            try:
+                self.viewer.gui.addMesh(nodeName+'/'+
+                                        robot.visuals[i][1]+'_'+
+                                        os.path.split(self.robot.visuals[i][2])[1], 
+                                        robot.visuals[i][2])
+            except:
+                print "Node already created"
         # iterate for creating nodes for all joint 
         for i in range(1,robot.model.nbodies):
-            self.viewer.gui.addXYZaxis('world/'+robot.name+'/'+
+            self.viewer.gui.addXYZaxis(nodeName+'/'+
                                        robot.model.names[i], [1., 0., 0., .5], 0.02, 1)
         # create a node for the center of mass
-        self.viewer.gui.addXYZaxis('world/'+robot.name+
+        self.viewer.gui.addXYZaxis(nodeName+
                                    '/globalCoM', [0., 1., 0., .5], 0.03, 0.3)
         # Finally, refresh the layout to obtain your first rendering
         self.viewer.gui.refresh()
@@ -166,6 +174,7 @@ class Viewer(object):
         if(ENABLE_VIEWER):
             self.robots[robot.name] = robot
             nodeName = "world/"+robot.name
+            print "adding robot: "+robot.name
             self.loadDisplayModel(nodeName, "pinocchio", self.robots[robot.name]);
             se3.framesKinematics(self.robots[robot.name].model, 
                                  self.robots[robot.name].data, 
