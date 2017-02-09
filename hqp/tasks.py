@@ -369,7 +369,7 @@ class MomentumTask(Task):
         self._ref_traj = traj
     
     def setGain(self, gain_vector):
-        assert gain_vector.shape == (1, self.robot.nv)         
+        assert gain_vector.shape == (self.robot.nv,)         
         #self.__gain_matrix = np.matrix(np.matlib.repmat(gain,1,self.dim))
         self.__gain_matrix = np.matrix(np.diag(gain_vector))
         #self.__gain_matrix = np.matrix(np.matlib.repmat(gain,1,42))
