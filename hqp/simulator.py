@@ -73,7 +73,8 @@ class Simulator(object):
         self.robot.q  = se3.integrate(self.robot.model, q.copy(), self.robot.v*dt)
         self.robot.v += dv.copy()*dt 
         self.updateRobotConfig(self.robot.q)
-        self.viewer.display(self.robot.q.copy(), self.robot.name)
+        if updateViewer is True:
+            self.viewer.display(self.robot.q.copy(), self.robot.name)
         
     def integrateAcc(self, t, dt, dv, f, tau, updateViewer=True):
         self.t = t;
