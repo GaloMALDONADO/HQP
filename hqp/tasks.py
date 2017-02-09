@@ -12,6 +12,10 @@ def exponentialDecay(kp):
     kv = 2*np.sqrt(kp)
     return kv
 
+def exponentialGrowth(kp):
+    kv = 1./2*np.sqrt(kp)
+    return kv
+
 def adaptativeGain(p_error, kmin, kmax, beta):
     '''
     Returns a kp value given:
@@ -320,7 +324,8 @@ class FreeFlyerTask(Task):
         self._ref_traj = ref_trajectory;
         # Init
         self._jacobian = np.matrix(np.eye(robot.nv))
-            
+        
+    
     @property
     def dim(self):
         return self._mask.sum ()
@@ -328,10 +333,8 @@ class FreeFlyerTask(Task):
     def mask(self, mask):
         assert len(mask) == 6, "The mask must have 6 elemets"
         self._mask = mask.astype(bool)
+               
 
-    def setTrajectory(self, traj):
-        self._ref_traj = traj
-    
     def dyn_value(self, t, q, v, update_geometry = False):
         # Compute error
         (q_ref, v_ref, a_ref) = self._ref_traj(t)
@@ -366,7 +369,7 @@ class MomentumTask(Task):
         self._ref_traj = traj
     
     def setGain(self, gain_vector):
-        assert gain_vector.shape == (1, self.robot.nv)         
+        assert gain_vector.shape == (self.robot.nv,)         
         #self.__gain_matrix = np.matrix(np.matlib.repmat(gain,1,self.dim))
         self.__gain_matrix = np.matrix(np.diag(gain_vector))
         #self.__gain_matrix = np.matrix(np.matlib.repmat(gain,1,42))
@@ -390,27 +393,21 @@ class MomentumTask(Task):
 
 ''' Define Kinetic Energy Task '''
 class KineticEnergyTask(Task):
-    def __init__ (self, robot, ref_trajectory, name = "Kinetic Energy Task"):
+    def __init__ (self, robot, name = "Kinetic Energy Task"):
         Task.__init__ (self, robot, name)
-        self._ref_traj = ref_trajectory
-        self._mask = (np.ones(3)).astype(bool)
+        # mask over the desired euclidian axis
+        self._mask = (np.ones(robot.nv)).astype(bool)
 
     def dyn_value(self, t, q, v):
         (ke_ref, vke_ref, ake_ref) = self._ref_traj(t)
-        #Jf = self.robot.frameJacobian(q, self._frame_id, False)
-        Jcom = self.robot.Jcom(q)
-        J = 0.5*(self.robot.data.M*np.transpose(Jcom.copy())*Jcom.copy())
-        p_com, v_com, a_com = self.robot.com(q,v,0*v)
-        ke_act = 0.5*self.robot.data.mass[0]*v_com
-        self.p_error = ke_act[self._mask,:] - ke_ref[self._mask,:]
-        if self.adaptGain is True:
-            self.kp = adaptativeGain(self.p_error, self.kmin, self.kmax, self.beta)
-        self.a_des = -self.kp * self.p_error 
+        Jf = self.robot.frameJacobian(q, self._frame_id, False)
+        J = 0.5*(self.robot.data.M*np.transpose(Jf)*Jf)
+        ke_act = 0.5*self.robot.data.mass[0]*self.robot.vcom^2
+        self.err = ke_act[self._mask,:] - ke_ref[self._mask,:]
+        self.a_des = -self.kp * self.err 
         self.drift = 0*self.a_des
         self._jacobian = J.copy()[self._mask,:] #* self.__gain_matrix
         return self._jacobian, self.drift, self.a_des
-
-
 
 
 ''' Define Angular Momentum Task  '''
