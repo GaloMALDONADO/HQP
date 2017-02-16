@@ -1,13 +1,12 @@
 import numpy as np
 from wrapper import Wrapper
 import scipy
-#import
-class NProjections:
-    #def __init__(self, name, q, v, dt, robotName, model_path):
+
+
+class NProjections():
     def reset(self,q,v,dt):
         self.robot.q = q
         self.robot.v = v
-        #self.time_step = 0
         self.dt = dt 
         self.t = 0.0
         self.tasks = []
@@ -31,9 +30,7 @@ class NProjections:
         return scipy.transpose(null_space)
 
     def addTask(self, task, weight):
-        '''
-        append a new task and weight to the stack
-        '''
+        ''' append a new task and weight to the stack '''
         self.tasks        += [task]
         self.task_weights += [weight]
         
@@ -76,7 +73,7 @@ class NProjections:
             for i in xrange (len(self.tasks)):
                 #_Stack jacobians and task functions
 
-                # if tasks are combined at same hierarchy
+                #if tasks are combined at same hierarchy
                 if np.size(self.tasks[i]) > 1:
                     j = []
                     e = []
@@ -169,6 +166,3 @@ class NProjections:
         Z += self.null(Jstack[k]/robot.M) * Z[k-1]
         return Z
 
-class qpOASES:
-    def __init__(self):
-        pass
