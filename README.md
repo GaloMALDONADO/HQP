@@ -34,12 +34,9 @@ Library for hierarchichal quadratic programming
 
 ##Extra Dependencies:
 - Models: Contains biomechanical and robotic models. Can be downloaded from here: https://github.com/GaloMALDONADO/Models 
-- gmp: can be downloaded from here: https://gmplib.org/devel/repo-usage.html
+- gmp: free library for arbitrary precision arithmetic, operating on signed integers, rational numbers, and floating-point numbers.
 ```json
-   $ ./.bootstrap
-   $ ./configure --enable-maintainer-mode
-   $ make 
-   $ make check
+   $ sudo apt-get install  libgmp3-dev
 ```
 - pycddlib: the simplest way to install is with pip: 
 ```json
