@@ -16,6 +16,8 @@ class Wrapper():
         self.mesh_path = mesh_path
         self.model_path = model_path
         r.parseModel(self.model_path,self.mesh_path)
+        self.upperPositionLimitOsim = r.upperPositionLimit
+        self.upperPositionLimitOsim = r.upperPositionLimit
         self.model = r.model 
         self.visuals = r.visuals
         self.data = r.data
