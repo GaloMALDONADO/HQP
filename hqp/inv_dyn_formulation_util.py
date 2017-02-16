@@ -2,7 +2,7 @@ import numpy as np
 from numpy.linalg import norm
 from numpy.random import random
 from polytope_conversion_utils import cone_span_to_face
-from pinocchio_inv_dyn.robot_wrapper import RobotWrapper
+from wrapper import Wrapper
 import pinocchio as se3
 from pinocchio.utils import zero as zeros
 from acc_bounds_util_multi_dof import computeAccLimits
