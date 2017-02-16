@@ -13,7 +13,8 @@ Library for hierarchichal quadratic programming
 - Python 2.7, numpy, scipy, matplotlib: 
 ```json	 
    $ sudo apt-get install python-numpy python-scipy python-matplotlib
-- Cython
+```
+- Cython: c-extensions for python
 ```json
    $ sudo pip install cython 
 ```
