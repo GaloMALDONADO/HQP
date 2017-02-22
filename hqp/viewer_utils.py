@@ -156,18 +156,18 @@ class Viewer(object):
 
     def updateRobotConfig(self, q, robotName, osimref=True):
         #self.robots[robotName].display(q, robotName)
-        '''
+        
         se3.computeAllTerms(self.robots[robotName].model, 
                             self.robots[robotName].data, 
                             q, 
                             self.robots[robotName].v)
-        '''
-        se3.forwardKinematics(self.robots[robotName].model, 
-                              self.robots[robotName].data, 
-                              q)
-        se3.framesKinematics(self.robots[robotName].model, 
-                             self.robots[robotName].data, 
-                             q)
+        
+        #se3.forwardKinematics(self.robots[robotName].model, 
+        #                      self.robots[robotName].data, 
+        #                      q)
+        #se3.framesKinematics(self.robots[robotName].model, 
+        #                     self.robots[robotName].data, 
+        #                     q)
         self.display(q,robotName)
 
     def addRobot(self, robot):
