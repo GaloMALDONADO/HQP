@@ -44,7 +44,7 @@ class Simulator(object):
                             q,
                             self.robot.v)
         se3.framesKinematics(self.robot.model, self.robot.data, q)
-
+        se3.computeJacobians(self.model, self.data, q)
 
     ''' ********** SET ROBOT STATE ******* '''
     def setPositions(self, q):
