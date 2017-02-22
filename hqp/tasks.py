@@ -157,6 +157,10 @@ class SE3Task(Task):
             a_des[3:] = self._gMl.rotation * a_des[3:];
             J[:3,:] = self._gMl.rotation * J[:3,:];
             J[3:,:] = self._gMl.rotation * J[3:,:];
+
+        self.p_error = p_error.vector
+        self.v_error = p_error.vector
+
         return J[self._mask,:], drift.vector[self._mask], a_des[self._mask]
 
 
@@ -193,15 +197,15 @@ class CoMTask(Task):
         p_ref, v_ref, a_ref = self._ref_trajectory(t)
         
         # Compute errors
-        p_error = p_com - p_ref
-        v_error = v_com - v_ref 
+        self.p_error = p_com - p_ref
+        self.v_error = v_com - v_ref 
         drift = a_com # Coriolis acceleration
         # porportional derivative task
         if self.expDecay is True:
             self.kv = exponentialDecay(self.kp)
         if self.adaptGain is True:
-            self.kp = adaptativeGain(p_error, self.kmin, self.kmax, self.beta)
-        a_des = -(self.kp * p_error + self.kv * v_error) + a_ref
+            self.kp = adaptativeGain(self.p_error, self.kmin, self.kmax, self.beta)
+        a_des = -(self.kp * self.p_error + self.kv * self.v_error) + a_ref
 
         # Compute jacobian
         J = self.robot.Jcom(q)
@@ -237,9 +241,9 @@ class JointPostureTask(Task):
     def dyn_value(self, t, q, v, update_geometry = False):
         # Compute error
         (q_ref, v_ref, a_ref) = self._ref_traj(t)
-        err = se3.differentiate(self.robot.model, q_ref, q)[6:]
-        derr = v[6:, t] - v_ref[self._mask]
-        a_des = a_ref[self._mask] - (self.kp * err + self.kv * derr) 
+        self.p_error = se3.differentiate(self.robot.model, q_ref, q)[6:]
+        self.v_error = v[6:, t] - v_ref[self._mask]
+        a_des = a_ref[self._mask] - (self.kp * self.p_error + self.kv * self.v_error) 
         drift = 0*a_des
         return self._jacobian[self._mask,:], drift[self._mask], a_des[self._mask]
 
@@ -340,10 +344,11 @@ class FreeFlyerTask(Task):
         (q_ref, v_ref, a_ref) = self._ref_traj(t)
         M_ff = se3.utils.XYZQUATToSe3(q[:7])
         M_ff_des = se3.utils.XYZQUATToSe3(q_ref[:7,t])
-        self.err = errorInSE3(M_ff, M_ff_des).vector
-        self.a_des = -self.kp * self.err 
+        self.p_error = errorInSE3(M_ff, M_ff_des).vector
+        self.v_error = v[self._mask] - v_ref[self._mask]
+        self.a_des = a_ref[self._mask] - (self.kp * self.p_error[self._mask] + self.kv * self.v_error)
         self.drift = 0*self.a_des
-        return self._jacobian[self._mask,:], self.drift[self._mask], self.a_des[self._mask]
+        return self._jacobian[self._mask,:], self.drift, self.a_des
 
 
 ''' Define Momentum Task  '''
@@ -380,7 +385,7 @@ class MomentumTask(Task):
         data = self.robot.data 
         JMom = se3.ccrba(model, data, q, v)
         hg_act =  self.robot.data.hg.np.A.copy()
-        self.err = hg_act[self._mask,:] - hg_ref[self._mask,:]
+        self.p_error = hg_act[self._mask,:] - hg_ref[self._mask,:]
         #self.derr =
         #***********************
         p_com = data.com[0]
@@ -399,7 +404,7 @@ class MomentumTask(Task):
         #drift = np.matrix(np.zeros((3, 1)))
         #a_tot = Ldot_des - hg_drift 
         #************************
-        self.a_des = -self.kp * self.err 
+        self.a_des = -self.kp * self.p_error
         #self.drift = 0*self.a_des
         #print JMom.copy()[self._mask,:].shape
         #print self.__gain_matrix.shape
