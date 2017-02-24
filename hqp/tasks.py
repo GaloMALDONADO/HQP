@@ -351,6 +351,7 @@ class FreeFlyerTask(Task):
         return self._jacobian[self._mask,:], self.drift, self.a_des
 
 
+
 ''' Define Momentum Task  '''
 class MomentumTask(Task):
     
@@ -385,8 +386,9 @@ class MomentumTask(Task):
         data = self.robot.data 
         JMom = se3.ccrba(model, data, q, v)
         hg_act =  self.robot.data.hg.np.A.copy()
+        #vhg_act = 
         self.p_error = hg_act[self._mask,:] - hg_ref[self._mask,:]
-        #self.derr =
+        #self.v_error = vhg_ref[self._mask,:] - vhg_act[self._mask,:]
         #***********************
         p_com = data.com[0]
         cXi = SE3.Identity()
@@ -401,16 +403,75 @@ class MomentumTask(Task):
         f_com = cXi.act(f_ff)
         hg_drift = f_com.angular 
         self.drift=f_com.np[self._mask,:]
+    
         #drift = np.matrix(np.zeros((3, 1)))
         #a_tot = Ldot_des - hg_drift 
         #************************
-        self.a_des = -self.kp * self.p_error
+        self.a_des = -(self.kp * self.p_error) + (self.kv*v_error) + ahg_ref
         #self.drift = 0*self.a_des
         #print JMom.copy()[self._mask,:].shape
         #print self.__gain_matrix.shape
         self._jacobian = JMom.copy()[self._mask,:] * self.__gain_matrix
         return self._jacobian, self.drift, self.a_des
 
+
+''' Define Fly Momentum Task '''
+class FlyMomentumTask(Task):
+    def __init__ (self, robot, ref_trajectory, name = "Momentum Task"):
+        Task.__init__ (self, robot, name)
+        # mask over the desired euclidian axis
+        self._mask = (np.ones(6)).astype(bool)
+        self._ref_traj = ref_trajectory
+        #self.__gain_matrix = np.matrix(np.ones([robot.nv,robot.nv]))
+        self.__gain_matrix = np.matrix(np.eye(robot.nv))
+        self.Hg = Momentum()
+
+    @property
+    def dim(self):
+        return self._mask.sum ()
+
+    def mask(self, mask):
+        self.Hg.mask(mask)
+
+    def setTrajectory(self, traj):
+        self._ref_traj = traj
+    
+    def setGain(self, gain_vector):
+        self.Hg.setGain(gain_vector)
+        
+    def dyn_value(self, t, q, v):
+        (hg_ref, vhg_ref, ahg_ref) = self._ref_traj(t)
+        model = self.robot.model
+        data = self.robot.data 
+        JMom = se3.ccrba(model, data, q, v)
+        hg_act =  self.robot.data.hg.np.A.copy()
+        #TODO add value vhg_act = 
+        self.p_error = hg_act[self._mask,:] - hg_ref[self._mask,:]
+        self.v_error = vhg_ref[self._mask,:] - vhg_act[self._mask,:]
+        #***********************
+        p_com = data.com[0]
+        cXi = SE3.Identity()
+        oXi = self.robot.data.oMi[1]
+        cXi.rotation = oXi.rotation
+        cXi.translation = oXi.translation - p_com
+        m_gravity = model.gravity.copy()
+        model.gravity.setZero()
+        b = se3.nle(model,data,q,v)
+        model.gravity = m_gravity
+        f_ff = se3.Force(b[:6])
+        f_com = cXi.act(f_ff)
+        hg_drift = f_com.angular 
+        self.drift=f_com.np[self._mask,:]
+    
+        #drift = np.matrix(np.zeros((3, 1)))
+        #a_tot = Ldot_des - hg_drift 
+        #************************
+        self.a_des = -(self.kp * self.p_error) + (self.kv*v_error) + ahg_ref
+        #self.drift = 0*self.a_des
+        #print JMom.copy()[self._mask,:].shape
+        #print self.__gain_matrix.shape
+        self._jacobian = JMom.copy()[self._mask,:] * self.__gain_matrix
+        return self._jacobian, self.drift, self.a_des
 
 ''' Define Gaze Task '''
 #TODO
