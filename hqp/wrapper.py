@@ -29,6 +29,7 @@ class Wrapper():
         self.dt = np.float(1/400.)
         self.v = zero(self.model.nv)
         self.a = zero(self.model.nv)
+        self.fext = self.data.hg.vector.copy()
 
     @property
     def nq(self):
