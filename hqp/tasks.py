@@ -386,9 +386,8 @@ class MomentumTask(Task):
         data = self.robot.data 
         JMom = se3.ccrba(model, data, q, v)
         hg_act =  self.robot.data.hg.np.A.copy()
-        #vhg_act = 
         self.p_error = hg_act[self._mask,:] - hg_ref[self._mask,:]
-        #self.v_error = vhg_ref[self._mask,:] - vhg_act[self._mask,:]
+        self.v_error = self.robot.fext[self._mask,:] - vhg_ref[self._mask,:]
         #***********************
         p_com = data.com[0]
         cXi = SE3.Identity()
@@ -403,11 +402,11 @@ class MomentumTask(Task):
         f_com = cXi.act(f_ff)
         hg_drift = f_com.angular 
         self.drift=f_com.np[self._mask,:]
-    
         #drift = np.matrix(np.zeros((3, 1)))
         #a_tot = Ldot_des - hg_drift 
         #************************
-        self.a_des = -(self.kp * self.p_error) + (self.kv*v_error) + ahg_ref
+        self.a_des = -(self.kp * self.p_error) 
+        #self.a_des = -(self.kp * self.p_error) + (self.kv*v_error) + ahg_ref
         #self.drift = 0*self.a_des
         #print JMom.copy()[self._mask,:].shape
         #print self.__gain_matrix.shape
@@ -424,30 +423,40 @@ class FlyMomentumTask(Task):
         self._ref_traj = ref_trajectory
         #self.__gain_matrix = np.matrix(np.ones([robot.nv,robot.nv]))
         self.__gain_matrix = np.matrix(np.eye(robot.nv))
-        self.Hg = Momentum()
-
+        #self.Hg = MomentumTask()
+    
     @property
     def dim(self):
         return self._mask.sum ()
 
     def mask(self, mask):
-        self.Hg.mask(mask)
+        assert len(mask) == 6, "The mask must have {} elements".format(6)
+        self._mask = mask.astype(bool)
 
     def setTrajectory(self, traj):
         self._ref_traj = traj
     
     def setGain(self, gain_vector):
-        self.Hg.setGain(gain_vector)
+        assert gain_vector.shape == (self.robot.nv,)         
+        #self.__gain_matrix = np.matrix(np.matlib.repmat(gain,1,self.dim))
+        self.__gain_matrix = np.matrix(np.diag(gain_vector))
+        #self.__gain_matrix = np.matrix(np.matlib.repmat(gain,1,42))
         
     def dyn_value(self, t, q, v):
-        (hg_ref, vhg_ref, ahg_ref) = self._ref_traj(t)
-        model = self.robot.model
-        data = self.robot.data 
-        JMom = se3.ccrba(model, data, q, v)
-        hg_act =  self.robot.data.hg.np.A.copy()
-        #TODO add value vhg_act = 
-        self.p_error = hg_act[self._mask,:] - hg_ref[self._mask,:]
-        self.v_error = vhg_ref[self._mask,:] - vhg_act[self._mask,:]
+        #(hg_ref, vhg_ref, ahg_ref) = self._ref_traj(t)
+        vhg_ref = np.matrix([0., 0., 0., 0., 0., 0.]).T
+        model =   self.robot.model
+        data =    self.robot.data 
+        JMom =    se3.ccrba(model, data, q, v)
+        hg_prv = data.hg.vector.copy()[self._mask,:]
+        #self.p_error = data.hg.vector.copy()[self._mask,:] - vhg_ref[self._mask,:]
+        #self.v_error = self.robot.fext[self._mask,:] - vhg_ref[self._mask,:]
+        #self.v_error = self.robot.fext[self._mask,:] 
+        #self.v_error = data.hg.vector.copy()[self._mask,:] - vhg_ref[self._mask,:]
+        #self.a_des   = -self.kv*self.v_error #+model.gravity.vector[self._mask,:]
+        self.a_des   = self.kv*self.robot.fext[self._mask,:]#vhg_ref #+model.gravity.vector[self._mask,:]
+        #self.drift = 0 * self.a_des
+        #self.a_des   = 
         #***********************
         p_com = data.com[0]
         cXi = SE3.Identity()
@@ -462,12 +471,7 @@ class FlyMomentumTask(Task):
         f_com = cXi.act(f_ff)
         hg_drift = f_com.angular 
         self.drift=f_com.np[self._mask,:]
-    
-        #drift = np.matrix(np.zeros((3, 1)))
-        #a_tot = Ldot_des - hg_drift 
         #************************
-        self.a_des = -(self.kp * self.p_error) + (self.kv*v_error) + ahg_ref
-        #self.drift = 0*self.a_des
         #print JMom.copy()[self._mask,:].shape
         #print self.__gain_matrix.shape
         self._jacobian = JMom.copy()[self._mask,:] * self.__gain_matrix
@@ -484,7 +488,9 @@ class KineticEnergyTask(Task):
         self._mask = (np.ones(robot.nv)).astype(bool)
 
     def dyn_value(self, t, q, v):
-        (ke_ref, vke_ref, ake_ref) = self._ref_traj(t)
+        #(ke_ref, vke_ref, ake_ref) = self._ref_traj(t)
+        ke_ref = self.robot.hg.vector
+        v_ref = np.matrix([0., 0., 0., 0., 0., 0.]).T
         Jf = self.robot.frameJacobian(q, self._frame_id, False)
         J = 0.5*(self.robot.data.M*np.transpose(Jf)*Jf)
         ke_act = 0.5*self.robot.data.mass[0]*self.robot.vcom^2
