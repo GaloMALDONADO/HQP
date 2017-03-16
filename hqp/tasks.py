@@ -316,7 +316,7 @@ class PosturalTask(Task):
 
 
 
-''' Define Free Flyer Rotation Task '''
+''' Defidata.oMi[f.parent].act(ne Free Flyer Rotation Task '''
 class FreeFlyerTask(Task):
 
     def __init__ (self, robot, ref_trajectory, name = "Joint Posture Task"):
@@ -424,7 +424,7 @@ class FlyMomentumTask(Task):
         #self.__gain_matrix = np.matrix(np.ones([robot.nv,robot.nv]))
         self.__gain_matrix = np.matrix(np.eye(robot.nv))
         #self.Hg = MomentumTask()
-    
+        
     @property
     def dim(self):
         return self._mask.sum ()
@@ -435,7 +435,7 @@ class FlyMomentumTask(Task):
 
     def setTrajectory(self, traj):
         self._ref_traj = traj
-    
+        
     def setGain(self, gain_vector):
         assert gain_vector.shape == (self.robot.nv,)         
         #self.__gain_matrix = np.matrix(np.matlib.repmat(gain,1,self.dim))
@@ -478,7 +478,143 @@ class FlyMomentumTask(Task):
         return self._jacobian, self.drift, self.a_des
 
 ''' Define Gaze Task '''
-#TODO
+class GazeSE3Task(Task):
+    def __init__(self, robot, frame_id, op_point, target, ref_trajectory, name = "Task"):
+        Task.__init__ (self, robot, name)
+        self._frame_id = frame_id
+        self._ref_trajectory = ref_trajectory
+        self._op_point = op_point
+        # set default value to M_ref
+        self._M_ref = SE3.Identity
+        # mask over the desired euclidian axis
+        self._mask = (np.ones(6)).astype(bool)
+        self._target = target
+        # for local to global
+        self._gMl = SE3.Identity()
+
+    def mask(self, mask):
+        assert len(mask) == 6, "The mask must have 6 elemets"
+        self._mask = mask.astype(bool)
+
+    @property
+    def refTrajectory(self):
+        return self._ref_trajectory
+
+    def __split(self, V):
+        return (V[0], V[1], V[2])
+
+    def get3DPointOnEyeOnHand(self,q):
+        # joint in global frame
+        oMi = self.robot.framePosition(self._frame_id,q);
+        #vision in global frame 
+        oMp = se3.SE3.Identity()
+        self.oMp.translation= oMi.translation+oMi.rotation*self._op_point
+        self.oMp.rotation = oMi.rotation.copy()
+        pMt =oMp.inverse()*self._target#oMp.inverse().act(self._target)
+        self.vision = oMp.act(pMt)
+        return self.__split(pMt.translation.A1)
+
+    def getProjection(self, X, Y, Z):
+        depth = Z#np.linalg.norm(np.array([X,Y,Z]))
+        x = X/depth #u0 + f * px * X / Z
+        y = Y/depth #v0 + f * py * Y / Z
+        return (x,y)
+    
+    def get3DPointVelocity(self, X,Y,Z):
+        oMi = self.robot.framePosition(self._frame_id);
+        self._gMl.rotation = oMi.rotation
+        v_frame = self.robot.frameVelocity(self._frame_id);
+        (Xdot,Ydot,Zdot) = -v_frame.linear.A1 - np.cross(v_frame.angular.A1,
+                                                         np.array([X,Y,Z],dtype=np.float64))
+        return (Xdot,Ydot,Zdot)
+    
+    def visualServoMethod(self, t, q, v):
+        x_ref, v_ref, a_ref  = self._ref_trajectory(t)
+        (X,Y,Z) =self.get3DPointOnEyeOnHand(q)
+        (x,y) = self.getProjection(X,Z,Y)
+        D = Y
+        Lx = np.matrix([ [-1./D,     0.,  x/D,         x*y,   -(1+(x*x)),    y] ,
+                         [    0., -1/D,   y/D,    1.+(y*y),         -x*y,   -x] ],
+                       dtype=np.float)
+        self.p_error = np.matrix([x,y], dtype=np.float).T - x_ref
+        a_des = -self.kp * self.p_error
+        drift = 0*a_des
+        J = Lx*self.robot.frameJacobian(q, self._frame_id, False)
+        self.v_error = self.p_error
+        return J, drift, a_des
+        
+    def axisAngleFromRotation(self, R):
+        pass
+    def vectorsMethod(self, t, q, v):                
+        from biomechanics.maths import rotation_matrix, rotation_from_matrix
+        x_ref, v_ref, a_ref  = self._ref_trajectory(t)
+        # joint in global frame
+        oMi = self.robot.framePosition(self._frame_id,q);
+        #vision in global frame 
+        oMp = se3.SE3.Identity()
+        oMp.translation= oMi.translation+oMi.rotation*self._op_point
+        oMp.rotation = oMi.rotation.copy()
+        pMt =oMp.inverse()*self._target
+        self.vision = oMp.act(pMt)
+        # ----
+        (x,y,z) = pMt.translation
+        r= np.linalg.norm([x,y,z])
+        t = np.trace(pMt.rotation)
+        x = 0#oMp.rotation[2,1] - oMp.rotation[1,2]
+        y = oMp.rotation[0,2] - oMp.rotation[2,0]
+        z = 0#oMp.rotation[1,0] - oMp.rotation[0,1]
+        theta = np.arctan2(r,t-1)
+        axis_dir = (x,y,z)
+        #axis_dir = np.array( (x/d_norm, y/d_norm, z/d_norm))
+        #theta = np.arccos(dnorm,)
+        M_des=se3.SE3.Identity()
+        M_des.rotation = np.asmatrix(rotation_matrix(axis_dir,theta))
+        a_des =-self.kp * errorInSE3(self.robot.framePosition(self._frame_id,q), M_des).vector[5]
+        print errorInSE3(self.robot.framePosition(self._frame_id,q), M_des).vector[5]
+        J = self.robot.frameJacobian(q, self._frame_id, False)[5,:]
+        v_frame = self.robot.frameVelocity(self._frame_id)
+        drift = self.robot.frameAcceleration(self._frame_id)
+        drift.linear += np.cross(v_frame.angular.T, v_frame.linear.T).T    
+        drift = drift.vector[5]
+        return J, drift, a_des
+
+    def dyn_value(self, t, q, v, local_frame = True):
+        # Get the reference trajectory
+        #self.J, self.drift, self.a_des = self.visualServoMethod(t, q, v)
+        self.J, self.drift, self.a_des = self.vectorsMethod(t, q, v)
+        return self.J, self.drift, self.a_des
+
+        #pMtVec = self._target-pMt.translation
+        #Vision = pMtVec.translation/np.linalg.norm(pMtVec.translation)
+        
+        #Eyes= se3.utils.matrixToRpy(oMp.rotation)
+        #p_error = np.cross(pMt_vector.A1,vec.A1)
+        #p_error = np.cross(oMop.rotation[:,0].A1,opMv_vector.A1)
+        
+        #self._gMl.rotation *opMv_vector.A
+        #self.vec= vec.A1
+        #
+        #a_des = self.kp*np.matrix(p_error).T
+        
+        # Interaction matrix
+        
+
+        
+        #v_frame = self.robot.frameVelocity(self._frame_id)
+        #drift = self.robot.frameAcceleration(self._frame_id)
+        #drift.linear += np.cross(v_frame.angular.T, v_frame.linear.T).T    
+        #self.drift =drift.vector[3:6]
+        
+        #J = self.robot.frameJacobian(q, self._frame_id, False)[3:6,:]
+        
+        #self.p_error = p_error
+        #print im2d
+        
+        
+        
+
+
+
 
 ''' Define Kinetic Energy Task '''
 class KineticEnergyTask(Task):
