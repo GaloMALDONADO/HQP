@@ -94,13 +94,32 @@ class Wrapper():
             q.append( self.dof2pinocchio(data[i][:]) )
         return q
         
+    def parseTrialVel(self, data):
+        dq=[]
+        for i in range(0, len(data)):
+            dq.append( self.vel2pinocchio(data[i][:]) )
+        return dq
+
     def readOsim(self, filename):
-        trial = osim_parser.readOsim(filename)
-        trial['osim_data'] = trial['data']
-        trial['pinocchio_data'] = np.asmatrix(self.parseTrial(trial['data'][:]))
-        trial['time'] = np.asmatrix(trial['time'][:])
-        return trial
+        extension = os.path.splitext(filename)[1]
+        if extension == '.mot':
+            print 'parsing motion data'
+            trial = osim_parser.readOsim(filename)
+            trial['osim_data'] = trial['data']
+            trial['pinocchio_data'] = np.asmatrix(self.parseTrial(trial['data'][:]))
+            trial['pinocchio_kine'] = np.asmatrix(self.parseTrialVel(trial['data'][:]))
+            trial['time'] = np.asmatrix(trial['time'][:])
+            return trial
+        elif extension == '.sto':
+            print 'parsing force data'
+            trial = np.asmatrix(osim_parser.readOsim(filename))
+            return trial
+        else:
+            print 'could not parse, do not know the extension:'
+            print extension
     
+
+        
     def inverseDynamics(self, q, v, a, f_ext=None):
         '''ID(q, v, a, f_ext)
          f_ext: Vector of external forces expressed in the local frame of each joint 
@@ -342,6 +361,7 @@ class Wrapper():
         '''
         #Change OpenSim values to correpond to Pinocchio model
         pt = np.squeeze(np.array( self.oMp * np.matrix(dof[3:6]).T )) #tx,ty,tz
+        #pt = np.squeeze(np.array(  np.matrix(dof[3:6]).T )) #tx,ty,tz
         pelvis = quaternion_from_matrix(euler_matrix((dof[2]),dof[0],dof[1],'szxy'))
         #dof[39]=-dof[39]#wrist flexion l
         #dof[40]=-dof[40]#wrist deviation l
@@ -361,6 +381,12 @@ class Wrapper():
                         +tuple([lshoulder[1],lshoulder[2],lshoulder[3],lshoulder[0]])+tuple(dof[37:42])
                         ])[0]
         return q
+        
+    def vel2pinocchio(self, dof):
+        #Change OpenSim values to correpond to Pinocchio model
+        pt = np.squeeze(np.array( self.oMp * np.matrix(dof[0:3]).T )) #tx,ty,tz
+        dq = np.array([ tuple(pt[0:3])+tuple(dof[0:3])+tuple(dof[6:42]) ])[0]
+        return dq
 
 
     #test individual joints
