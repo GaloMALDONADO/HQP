@@ -60,6 +60,7 @@ class SE3Task(Task):
         self._mask = (np.ones(6)).astype(bool)
         # for local to global
         self._gMl = SE3.Identity()
+        self.__gain_matrix = np.matrix(np.eye(robot.nv))
 
     def mask(self, mask):
         assert len(mask) == 6, "The mask must have 6 elemets"
@@ -73,6 +74,10 @@ class SE3Task(Task):
     @property
     def refTrajectory(self):
         return self._ref_trajectory
+        
+    def setGain(self, gain_vector):
+        assert gain_vector.shape == (self.robot.nv,)         
+        self.__gain_matrix = np.matrix(np.diag(gain_vector))
 
     def jointPostition(self):
         return robot.position(robot.q, joint_id)
@@ -138,19 +143,19 @@ class SE3Task(Task):
         
         #_ Taks functions:
         # Compute error acceleration desired
-        p_error= errorInSE3(oMi, M_ref);
-        v_error = v_frame - self._gMl.actInv(v_ref)
+        self.p_error= errorInSE3(oMi, M_ref);
+        self.v_error = v_frame - self._gMl.actInv(v_ref)
         drift = self.robot.frameAcceleration(self._frame_id)
         drift.linear += np.cross(v_frame.angular.T, v_frame.linear.T).T    
         
         # porportional derivative task
-        if self.expDecay is True:
-            self.kv = exponentialDecay(self.kp)
-        if self.adaptGain is True:
-            self.kp = adaptativeGain(p_error.vector, self.kmin, self.kmax, self.beta)
-        a_des = - self.kp * p_error.vector - self.kv * v_error.vector + self._gMl.actInv(a_ref).vector #sign +-
+        #if self.expDecay is True:
+        #    self.kv = exponentialDecay(self.kp)
+        #if self.adaptGain is True:
+        #    self.kp = adaptativeGain(p_error.vector, self.kmin, self.kmax, self.beta)
+        a_des = self._gMl.actInv(a_ref).vector - (self.kp*self.p_error.vector + self.kv*self.v_error.vector) 
         J = self.robot.frameJacobian(q, self._frame_id, False)
-    
+        
         if(local_frame==False):
             drift = self._gMl.act(drift);
             a_des[:3] = self._gMl.rotation * a_des[:3];
@@ -158,10 +163,7 @@ class SE3Task(Task):
             J[:3,:] = self._gMl.rotation * J[:3,:];
             J[3:,:] = self._gMl.rotation * J[3:,:];
 
-        self.p_error = p_error.vector
-        self.v_error = p_error.vector
-
-        return J[self._mask,:], drift.vector[self._mask], a_des[self._mask]
+        return J[self._mask,:]*self.__gain_matrix, drift.vector[self._mask], a_des[self._mask]
 
 
     def jacobian(self, q, update_geometry = False):
@@ -178,6 +180,7 @@ class CoMTask(Task):
         self._ref_trajectory = ref_trajectory
         # mask over the desired euclidian axis
         self._mask = (np.ones(3)).astype(bool)
+        self.__gain_matrix = np.matrix(np.eye(robot.nv))
     
     @property
     def dim(self):
@@ -189,6 +192,10 @@ class CoMTask(Task):
     def mask(self, mask):
         assert len(mask) == 3, "The mask must have 3 elements"
         self._mask = mask.astype(bool)
+
+    def setGain(self, gain_vector):
+        assert gain_vector.shape == (self.robot.nv,)         
+        self.__gain_matrix = np.matrix(np.diag(gain_vector))
 
     def dyn_value(self, t, q, v, update_geometry = False):
         # Get the current CoM position, velocity and acceleration
@@ -208,7 +215,7 @@ class CoMTask(Task):
         a_des = -(self.kp * self.p_error + self.kv * self.v_error) + a_ref
 
         # Compute jacobian
-        J = self.robot.Jcom(q)
+        J = self.robot.Jcom(q)*self.__gain_matrix
         
         return J[self._mask,:], drift[self._mask], a_des[self._mask]
 
@@ -380,38 +387,98 @@ class MomentumTask(Task):
         self.__gain_matrix = np.matrix(np.diag(gain_vector))
         #self.__gain_matrix = np.matrix(np.matlib.repmat(gain,1,42))
 
-    def dyn_value(self, t, q, v):
-        (hg_ref, vhg_ref, ahg_ref) = self._ref_traj(t)
+    def _getBiais(self,q,v):
         model = self.robot.model
-        data = self.robot.data 
-        JMom = se3.ccrba(model, data, q, v)
-        hg_act =  self.robot.data.hg.np.A.copy()
-        self.p_error = hg_act[self._mask,:] - hg_ref[self._mask,:]
-        self.v_error = self.robot.fext[self._mask,:] - vhg_ref[self._mask,:]
-        #***********************
-        p_com = data.com[0]
-        cXi = SE3.Identity()
-        oXi = self.robot.data.oMi[1]
+        data = self.robot.data
+        p_com = self.robot.com(q)
+
+        oXi = data.oMi[1]
+        cXi = se3.SE3.Identity()
         cXi.rotation = oXi.rotation
         cXi.translation = oXi.translation - p_com
+        #cXi.translation = p_com
+
         m_gravity = model.gravity.copy()
         model.gravity.setZero()
         b = se3.nle(model,data,q,v)
         model.gravity = m_gravity
         f_ff = se3.Force(b[:6])
         f_com = cXi.act(f_ff)
-        hg_drift = f_com.angular 
-        self.drift=f_com.np[self._mask,:]
-        #drift = np.matrix(np.zeros((3, 1)))
-        #a_tot = Ldot_des - hg_drift 
-        #************************
-        self.a_des = -(self.kp * self.p_error) 
-        #self.a_des = -(self.kp * self.p_error) + (self.kv*v_error) + ahg_ref
-        #self.drift = 0*self.a_des
-        #print JMom.copy()[self._mask,:].shape
-        #print self.__gain_matrix.shape
+        return f_com.np
+
+    def _getContribution(self,com,s):
+        ''' 
+        Get segment contribution to centroidal angular
+        momenta and its rate of change 
+        Inputs:                                                                           
+        - s : segment index  
+        - com : position of the CoM in world reference frame 
+        '''
+        # get spatial inertia and velocity
+        Y = self.robot.model.inertias[s]
+        V = self.robot.data.v[s]
+        # centroidal momenta in body frame 
+        # ihi = I Vi
+        iHi = se3.Force(Y.matrix()*V.vector)
+        # rate of change of centroidal momenta in body frame 
+        # ih_doti = Iai + Vi x* hi  
+        # TO VERIFY  
+        iHDi = (self.robot.model.inertias[s]*self.robot.data.a[s]) + se3.Inertia.vxiv(Y,V)
+        #iHDi.linear  
+        # express at the center of mass 
+        oMc = se3.SE3.Identity()
+        oMc.translation = self.robot.data.oMi[1].translation - com
+        # uncomment in case need to change the rotation of the reference frame 
+        oMc.rotation = self.robot.data.oMi[1].rotation 
+        cMi = oMc.actInv( self.robot.data.oMi[s] )
+        cHi = cMi.act(iHi).np.A1
+        cHDi = cMi.act(iHDi).np.A1
+        return cHi, cHDi
+
+    def _calculateHdot(self, q):
+        # Individual contributions to centroidal momenta (and its rate of change)                            
+        segH = []; segF=[]
+        p_com = self.robot.com(q)
+        for s in range(1,26):
+            hc, hcd = self._getContribution(p_com,s)
+            segH.append(hc)
+            segF.append(hcd)
+        return np.matrix(np.sum(np.array(segF).squeeze(),0)).T
+
+
+    def dyn_value_h(self, t, q, v):
+        (self.hg_ref, self.dhg_ref, aahg_ref) = self._ref_traj(t)
+        JMom = se3.ccrba(self.robot.model, self.robot.data, q, v)
+        b = self._getBiais(q,v)
+        self.hg_act =  self.robot.data.hg.np.A.copy()
+        self.dhg_act = self._calculateHdot(q)
+        
+        self.drift=b[self._mask,:]
+        
+        self.p_error = self.hg_act[self._mask,:] - self.hg_ref[self._mask,:]        
+        self.v_error = self.dhg_act[self._mask,:] - self.dhg_ref[self._mask,:]
+        #self.dh_des =  -( (self.kp * self.p_error) + (self.kv*self.v_error) )
+        self.dh_des = - (self.kp * self.p_error)
         self._jacobian = JMom.copy()[self._mask,:] * self.__gain_matrix
-        return self._jacobian, self.drift, self.a_des
+        #self.drift = 0*self.dh_des
+        return self._jacobian, self.drift, self.dh_des
+
+    def dyn_value(self, t, q, v):
+        (self.hg_ref, self.dhg_ref, aahg_ref) = self._ref_traj(t)
+        JMom = se3.ccrba(self.robot.model, self.robot.data, q, v)
+        b = self._getBiais(q,v)
+        self.hg_act =  self.robot.data.hg.np.A.copy()
+        self.dhg_act = self._calculateHdot(q)
+        
+        self.drift=b[self._mask,:]
+        
+        self.p_error = self.hg_act[self._mask,:] - self.hg_ref[self._mask,:]        
+        self.v_error = self.dhg_act[self._mask,:] - self.dhg_ref[self._mask,:]
+        self.dh_des =  - ((self.kp * self.p_error) + (self.kv*self.v_error) )
+        self.h_des = - (self.kp * self.p_error)
+        self._jacobian = JMom.copy()[self._mask,:] * self.__gain_matrix
+        #self.drift = 0*self.dh_des
+        return self._jacobian, self.drift, self.h_des
 
 
 ''' Define Fly Momentum Task '''
@@ -454,6 +521,7 @@ class FlyMomentumTask(Task):
         #self.v_error = self.robot.fext[self._mask,:] 
         #self.v_error = data.hg.vector.copy()[self._mask,:] - vhg_ref[self._mask,:]
         #self.a_des   = -self.kv*self.v_error #+model.gravity.vector[self._mask,:]
+
         self.a_des   = self.kv*self.robot.fext[self._mask,:]#vhg_ref #+model.gravity.vector[self._mask,:]
         #self.drift = 0 * self.a_des
         #self.a_des   = 

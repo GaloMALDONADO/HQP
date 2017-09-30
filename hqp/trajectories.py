@@ -44,7 +44,7 @@ class VaryingNdTrajectory (object):
     assert t>=0.0, "Time must be non-negative"
     i = int(t/self._dt);
     if(i>=self._x_ref.shape[1]):
-       raise ValueError("Specified time exceeds the duration of the trajectory: "+str(t))
+      raise ValueError("Specified time exceeds the duration of the trajectory: "+str(t))
     return (self._x_ref[:,i], self._v_ref[:,i], self._a_ref[:,i]);
 
 
@@ -159,3 +159,27 @@ class SmoothedSE3Trajectory (object):
     v.linear = self._v_ref[:,i];
     a.linear = self._a_ref[:,i];
     return (M, v, a);
+
+
+''' An Nd trajectory with constant state and velocity and zero acceleration. '''
+class ConstantNdTrajectoryXV (object):
+
+  def __init__ (self, name, x_ref, v_ref):
+    self._name = name
+    self._dim = x_ref.shape[0]
+    self._x_ref = np.matrix.copy(x_ref);
+    self._v_ref = np.matrix.copy(v_ref);
+    self._a_ref = np.zeros(x_ref.shape);
+
+  @property
+  def dim(self):
+    return self._dim
+    
+  def setReference(self, x_ref):
+    assert x_ref.shape[0]==self._x_ref.shape[0]
+    self._x_ref = x_ref;
+    self._v_ref = v_ref;
+
+  def __call__ (self, t):
+    return (self._x_ref, self._v_ref, self._a_ref);
+

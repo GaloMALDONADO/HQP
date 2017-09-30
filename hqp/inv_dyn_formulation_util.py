@@ -2,7 +2,7 @@ import numpy as np
 from numpy.linalg import norm
 from numpy.random import random
 from polytope_conversion_utils import cone_span_to_face
-from wrapper import Wrapper
+from hqp.wrapper import Wrapper
 import pinocchio as se3
 from pinocchio.utils import zero as zeros
 from acc_bounds_util_multi_dof import computeAccLimits
@@ -195,9 +195,9 @@ class InvDynFormulation (object):
     
     def __init__(self, name, q, v, dt, mesh_dir, urdfFileName, freeFlyer=True):
         if(freeFlyer):
-            self.r = RobotWrapper(urdfFileName, mesh_dir, root_joint=se3.JointModelFreeFlyer());
+            self.r = Wrapper(urdfFileName, mesh_dir,'robot',True)# root_joint=se3.JointModelFreeFlyer());
         else:
-            self.r = RobotWrapper(urdfFileName, mesh_dir, None);
+            self.r = Wrapper(urdfFileName, mesh_dir, None);
         self.freeFlyer = freeFlyer;
         self.nq = self.r.nq;
         self.nv = self.r.nv;
@@ -404,7 +404,8 @@ class InvDynFormulation (object):
         self.setPositions(q, updateConstraintReference=False);
         self.setVelocities(v);
         
-        self.r.computeAllTerms(q, v);
+        #self.r.computeAllTerms(q, v);
+        self.r.update(q);
         self.r.framesKinematics(q);
         self.x_com    = self.r.com(q, update_kinematics=False);
         self.J_com    = self.r.Jcom(q, update_kinematics=False);
