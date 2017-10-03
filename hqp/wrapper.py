@@ -378,16 +378,17 @@ class Wrapper():
         '''
         #Change OpenSim values to correpond to Pinocchio model
         pt = np.squeeze(np.array( self.oMp * np.matrix(dof[3:6]).T )) #tx,ty,tz
-        #pt = np.squeeze(np.array(  np.matrix(dof[3:6]).T )) #tx,ty,tz
-        pelvis = quaternion_from_matrix(euler_matrix((dof[2]),dof[0],dof[1],'szxy'))
+        pelvis = quaternion_from_matrix(euler_matrix((dof[0]),dof[1],dof[2],'rxyz'))
+                
         #dof[39]=-dof[39]#wrist flexion l
         #dof[40]=-dof[40]#wrist deviation l
-        rshoulder = quaternion_from_matrix(euler_matrix(dof[28],dof[26],dof[27],'rzxy'))
-        lshoulder = quaternion_from_matrix(euler_matrix(-dof[36],dof[34],-dof[35],'rzxy'))
-        rhip = quaternion_from_matrix(euler_matrix(dof[8],dof[6],dof[7],'szxy'))
-        lhip = quaternion_from_matrix(euler_matrix(-dof[15],dof[13],-dof[14],'szxy'))
-        back = quaternion_from_matrix(euler_matrix(dof[22],dof[20],dof[21],'szxy'))
-        neck = quaternion_from_matrix(euler_matrix(dof[25],dof[23],dof[24],'szxy'))
+        rshoulder = quaternion_from_matrix(euler_matrix(dof[26],dof[27],dof[28],'rxyz'))
+        lshoulder = quaternion_from_matrix(euler_matrix(dof[34],-dof[35],-dof[36],'rxyz'))
+        rhip = quaternion_from_matrix(euler_matrix(dof[5],dof[7],dof[8],'rxyz'))
+        lhip = quaternion_from_matrix(euler_matrix(dof[13],-dof[14],-dof[15],'rxyz'))
+        back = quaternion_from_matrix(euler_matrix(dof[20],dof[21],dof[22],'rxyz'))
+        neck = quaternion_from_matrix(euler_matrix(dof[23],dof[24],dof[25],'rxyz'))
+        
 
         q = np.array([ tuple(pt[0:3])+tuple([pelvis[1],pelvis[2],pelvis[3],pelvis[0]])
                         +tuple([rhip[1],rhip[2],rhip[3],rhip[0]])+tuple(dof[9:13])

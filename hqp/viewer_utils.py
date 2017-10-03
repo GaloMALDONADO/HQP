@@ -5,17 +5,17 @@ from pinocchio.utils import zero as mat_zeros
 import numpy as np
 import pinocchio as se3
 import os
-from pinocchio.utils import XYZQUATToViewerConfiguration, zero, se3ToXYZQUAT
+#from pinocchio.utils import XYZQUATToViewerConfiguration, zero, se3ToXYZQUAT
 
 ENABLE_VIEWER = "ON"
 
-def xyzRpyToViewerConfig(xyz, rpy):
-    xyz = np.asmatrix(xyz).reshape((3,1))
-    rpy = np.asmatrix(rpy).reshape((3,1))
-    R = se3.utils.rpyToMatrix(rpy)
-    H = se3.SE3(R, xyz)
-    pinocchioConf = se3.utils.se3ToXYZQUAT(H)
-    return se3.utils.XYZQUATToViewerConfiguration(pinocchioConf)
+#def xyzRpyToViewerConfig(xyz, rpy):
+#    xyz = np.asmatrix(xyz).reshape((3,1))
+#    rpy = np.asmatrix(rpy).reshape((3,1))
+#    R = se3.utils.rpyToMatrix(rpy)
+#    H = se3.SE3(R, xyz)
+#    pinocchioConf = se3.utils.se3ToXYZQUAT(H)
+#    return se3.utils.XYZQUATToViewerConfiguration(pinocchioConf)
 
 
 class Viewer(object):
@@ -102,7 +102,8 @@ class Viewer(object):
         layout. If multiple objects have to be placed at the same time, do the refresh only
         at the end of the list
         '''
-        pinocchioConf = XYZQUATToViewerConfiguration(se3ToXYZQUAT(M))
+        #pinocchioConf = XYZQUATToViewerConfiguration(se3ToXYZQUAT(M))
+        pinocchioConf = se3.utils.se3ToXYZQUAT(M)
         self.viewer.gui.applyConfiguration(objName,pinocchioConf)
         if refresh: self.viewer.gui.refresh()
 
