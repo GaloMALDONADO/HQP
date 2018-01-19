@@ -86,12 +86,12 @@ class Viewer(object):
             except:
                 print "Node already created"
         # iterate for creating nodes for all joint 
-        for i in range(1,robot.model.nbodies):
-            self.viewer.gui.addXYZaxis(nodeName+'/'+
-                                       robot.model.names[i], [1., 0., 0., .5], 0.02, 1)
+        #for i in range(1,robot.model.nbodies):
+        #    self.viewer.gui.addXYZaxis(nodeName+'/'+
+        #                               robot.model.names[i], [1., 0., 0., .5], 0.02, 1)
         # create a node for the center of mass
         self.viewer.gui.addXYZaxis(nodeName+
-                                   '/globalCoM', [0., 1., 0., .5], 0.03, 0.3)
+                                   '/globalCoM', [0., 1., 0., .5], 0.03, 0.05)#0.3
         # Finally, refresh the layout to obtain your first rendering
         self.viewer.gui.refresh()
 

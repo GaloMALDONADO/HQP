@@ -384,7 +384,7 @@ class Wrapper():
         #dof[40]=-dof[40]#wrist deviation l
         rshoulder = quaternion_from_matrix(euler_matrix(dof[26],dof[27],dof[28],'rxyz'))
         lshoulder = quaternion_from_matrix(euler_matrix(dof[34],-dof[35],-dof[36],'rxyz'))
-        rhip = quaternion_from_matrix(euler_matrix(dof[5],dof[7],dof[8],'rxyz'))
+        rhip = quaternion_from_matrix(euler_matrix(dof[6],dof[7],dof[8],'rxyz'))
         lhip = quaternion_from_matrix(euler_matrix(dof[13],-dof[14],-dof[15],'rxyz'))
         back = quaternion_from_matrix(euler_matrix(dof[20],dof[21],dof[22],'rxyz'))
         neck = quaternion_from_matrix(euler_matrix(dof[23],dof[24],dof[25],'rxyz'))
